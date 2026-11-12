@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniAudit AI — Privacy-First Hybrid Document & Compliance Auditor</title>
+  <!-- Tailwind CSS CDN for instant, clean, zero-dependency styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .gradient-border {
+      border: 1px solid transparent;
+      background: linear-gradient(to right, #0f172a, #0f172a), linear-gradient(to right, #38bdf8, #818cf8);
+      background-clip: padding-box, border-box;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- Navigation / Top Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-cyan-400 to-indigo-300 bg-clip-text text-transparent">OmniAudit AI</span>
+          <span class="ml-2 text-xs font-mono text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">Hybrid Inference</span>
+        </div>
+      </div>
+
+      <!-- Engine Live Badge -->
+      <div id="engineStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span id="engineBadgeText">Checking Chrome Built-in AI...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Left Column: Input & Controls (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- Mode & Policy Controls -->
+      <div class="glass-panel rounded-2xl p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-between">
+          <span>Inference Strategy</span>
+          <span class="text-xs text-cyan-400 font-mono">Firebase AI Logic</span>
+        </h2>
+
+        <div class="space-y-3">
+          <label class="flex items-start gap-3 p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20 cursor-pointer transition hover:bg-cyan-900/30">
+            <input type="radio" name="inferenceMode" value="prefer_on_device" checked class="mt-1 text-cyan-500 focus:ring-cyan-400" />
+            <div>
+              <span class="text-sm font-medium text-white block">Prefer On-Device (Recommended)</span>
+              <span class="text-xs text-slate-400">Processes locally with Gemini Nano in Chrome (zero latency, 100% private). Falls back to Gemini Flash cloud if document overflows.</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/40 cursor-pointer transition hover:bg-slate-800/40">
+            <input type="radio" name="inferenceMode" value="only_on_device" class="mt-1 text-cyan-500 focus:ring-cyan-400" />
+            <div>
+              <span class="text-sm font-medium text-white block">Strict On-Device Only</span>
+              <span class="text-xs text-slate-400">Guarantees 0 bytes leave your machine. Strictly refuses cloud routing.</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/40 cursor-pointer transition hover:bg-slate-800/40">
+            <input type="radio" name="inferenceMode" value="cloud_only" class="mt-1 text-cyan-500 focus:ring-cyan-400" />
+            <div>
+              <span class="text-sm font-medium text-white block">Direct Cloud (Gemini 1.5 Flash)</span>
+              <span class="text-xs text-slate-400">Routes straight to Firebase AI Logic backend with full 1M token context.</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Sample Loaders -->
+        <div class="mt-4 pt-4 border-t border-slate-800/80">
+          <span class="text-xs text-slate-400 font-medium block mb-2">Load Test Document Sample:</span>
+          <div class="flex flex-wrap gap-2">
+            <button id="btnSampleContract" type="button" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              📄 NDA with PII & Strict Penalties
+            </button>
+            <button id="btnSampleSaaS" type="button" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              💼 SaaS Master Agreement
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Editor Area -->
+      <div class="glass-panel rounded-2xl p-6 flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <label for="docText" class="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Document for Audit
+          </label>
+          <span id="charCount" class="text-xs text-slate-500 font-mono">0 chars</span>
+        </div>
+
+        <textarea
+          id="docText"
+          rows="14"
+          placeholder="Paste contract clauses, terms of service, employment agreement, or sensitive customer notes here to audit..."
+          class="w-full flex-1 rounded-xl bg-slate-950/80 border border-slate-800 p-4 font-mono text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-y"
+        ></textarea>
+
+        <button
+          id="btnRunAudit"
+          class="mt-4 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition transform active:scale-[0.99]"
+        >
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>Run Hybrid Audit Now</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Audit Intelligence & Output (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+
+      <!-- Metrics & Engine Real-time Card -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-cyan-500">
+          <span class="text-xs text-slate-400 uppercase font-mono block">Active Engine</span>
+          <span id="statEngine" class="text-sm font-bold text-white mt-1 block">Ready</span>
+        </div>
+        <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-indigo-500">
+          <span class="text-xs text-slate-400 uppercase font-mono block">Inference Latency</span>
+          <span id="statLatency" class="text-sm font-bold text-white mt-1 block font-mono">-- ms</span>
+        </div>
+        <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-emerald-500">
+          <span class="text-xs text-slate-400 uppercase font-mono block">Privacy Status</span>
+          <span id="statPrivacy" class="text-sm font-bold text-emerald-400 mt-1 block">Local First</span>
+        </div>
+      </div>
+
+      <!-- Report View Panel -->
+      <div class="glass-panel rounded-2xl p-6 flex-1 flex flex-col min-h-[500px]">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-cyan-400"></div>
+            <h3 class="font-bold text-slate-200 text-base">Executive Audit & Compliance Report</h3>
+          </div>
+          <button id="btnExportMd" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            Export Report (.md)
+          </button>
+        </div>
+
+        <div id="reportContainer" class="flex-1 overflow-y-auto pr-2 prose prose-invert prose-cyan max-w-none text-slate-300 text-sm leading-relaxed">
+          <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 py-16">
+            <svg class="w-16 h-16 text-slate-700 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="font-medium text-slate-400">No document audited yet.</p>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm">Paste a document or click one of the test samples to execute on-device privacy verification and compliance risk analysis.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
+    Built for the Google <span class="text-slate-400 font-medium">#BuildHybridAI 2026</span> Hackathon on Devpost · Licensed under Apache 2.0
+  </footer>
+
+  <!-- App Script -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
