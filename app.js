@@ -7,6 +7,11 @@ const btnExportMd = document.getElementById("btnExportMd");
 const reportContainer = document.getElementById("reportContainer");
 const engineStatusBadge = document.getElementById("engineStatusBadge");
 const engineBadgeText = document.getElementById("engineBadgeText");
+const netStatusBadge = document.getElementById("netStatusBadge");
+const netStatusText = document.getElementById("netStatusText");
+const routerModeTitle = document.getElementById("routerModeTitle");
+const routerModeDesc = document.getElementById("routerModeDesc");
+const routerDecisionBanner = document.getElementById("routerDecisionBanner");
 const statEngine = document.getElementById("statEngine");
 const statLatency = document.getElementById("statLatency");
 const statPrivacy = document.getElementById("statPrivacy");
@@ -19,12 +24,48 @@ const engine = new HybridAuditEngine({
 
 let latestReportContent = "";
 
-// Update Char Count
+// Real-time Network Monitoring
+function updateNetworkTelemetry() {
+  const isOnline = navigator.onLine;
+  if (!isOnline) {
+    netStatusBadge.className =
+      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-950/70 text-amber-300 border border-amber-600/60 animate-pulse";
+    netStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span id="netStatusText">Offline (Zero-Cloud Enforced)</span>`;
+
+    routerDecisionBanner.className =
+      "p-4 rounded-xl border border-amber-500/40 bg-amber-950/30 text-amber-200 text-xs leading-relaxed";
+    routerModeTitle.textContent = "Offline Mode: 100% Local Inference";
+    routerModeDesc.textContent =
+      "No internet connection detected. The app automatically forces 100% On-Device execution via Chrome Gemini Nano. Zero data will attempt to reach the cloud.";
+
+    statPrivacy.textContent = "Offline Air-Gapped";
+    statPrivacy.className = "text-sm font-bold text-amber-400 mt-1 block";
+  } else {
+    netStatusBadge.className =
+      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/60";
+    netStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span id="netStatusText">Online (Hybrid Ready)</span>`;
+
+    routerDecisionBanner.className =
+      "p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-slate-300 text-xs leading-relaxed";
+    routerModeTitle.textContent = "Auto-Routing: Hybrid Intelligence Active";
+    routerModeDesc.textContent =
+      "Internet connected. Privacy sanitization & rapid analysis run locally on Gemini Nano. If deep cross-referencing or huge documents require it, Firebase AI Logic seamlessly bridges to cloud Gemini Flash.";
+
+    statPrivacy.textContent = "Hybrid Protected";
+    statPrivacy.className = "text-sm font-bold text-emerald-400 mt-1 block";
+  }
+}
+
+window.addEventListener("online", updateNetworkTelemetry);
+window.addEventListener("offline", updateNetworkTelemetry);
+updateNetworkTelemetry();
+
+// Char count update
 docText.addEventListener("input", () => {
   charCount.textContent = `${docText.value.length} chars`;
 });
 
-// Detect capabilities on startup
+// Detect browser AI capabilities
 async function initCapabilities() {
   const caps = await engine.checkCapabilities();
   if (caps.available) {
@@ -41,14 +82,7 @@ async function initCapabilities() {
 }
 initCapabilities();
 
-// Mode selector change listener
-document.querySelectorAll('input[name="inferenceMode"]').forEach((radio) => {
-  radio.addEventListener("change", (e) => {
-    engine.mode = e.target.value;
-  });
-});
-
-// Status notification handler from engine
+// Stream listener
 engine.onStatusChange((status) => {
   if (status.step === "streaming" && status.partial) {
     reportContainer.innerHTML = marked.parse(status.partial);
@@ -57,7 +91,7 @@ engine.onStatusChange((status) => {
   }
 });
 
-// Run Audit Action
+// Run Audit Action (Autonomous Engine Routing)
 btnRunAudit.addEventListener("click", async () => {
   const text = docText.value.trim();
   if (!text) {
@@ -65,12 +99,19 @@ btnRunAudit.addEventListener("click", async () => {
     return;
   }
 
+  // Force local engine if offline
+  if (!navigator.onLine) {
+    engine.mode = "only_on_device";
+  } else {
+    engine.mode = "prefer_on_device";
+  }
+
   btnRunAudit.disabled = true;
   btnRunAudit.classList.add("opacity-60", "cursor-not-allowed");
   reportContainer.innerHTML = `
     <div class="h-64 flex flex-col items-center justify-center text-slate-400">
       <div class="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p class="font-mono text-sm animate-pulse">Running hybrid compliance & PII audit...</p>
+      <p class="font-mono text-sm animate-pulse">Running autonomous audit (${navigator.onLine ? "Hybrid Network" : "Offline On-Device"})...</p>
     </div>
   `;
 
@@ -82,7 +123,9 @@ btnRunAudit.addEventListener("click", async () => {
     // Update real metrics
     statEngine.textContent = result.model;
     statLatency.textContent = `${result.latencyMs} ms`;
-    statPrivacy.textContent = result.isPrivateZeroCloud ? "100% On-Device" : "Hybrid Sanitized";
+    statPrivacy.textContent = result.isPrivateZeroCloud
+      ? "100% On-Device (Zero Cloud)"
+      : "Hybrid Sanitized (Firebase)";
     statPrivacy.className = result.isPrivateZeroCloud
       ? "text-sm font-bold text-emerald-400 mt-1 block"
       : "text-sm font-bold text-cyan-400 mt-1 block";
