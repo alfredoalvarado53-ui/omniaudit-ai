@@ -1,87 +1,55 @@
-# OmniAudit AI — Privacy-First Hybrid Document & Compliance Auditor
+# OmniAudit AI — Enterprise Hybrid Contract & Compliance Studio
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Web%20%2F%20Chrome-orange.svg)]()
-[![Google Hackathon](https://img.shields.io/badge/Google-%23BuildHybridAI%202026-green.svg)]()
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Google BuildHybridAI 2026](https://img.shields.io/badge/Google-BuildHybridAI_2026-4285F4.svg?logo=google)](https://firebasehybridaihackathon.devpost.com/)
+[![Built for Chrome Built-in AI](https://img.shields.io/badge/Chrome_Built--in_AI-Gemini_Nano-34A853.svg?logo=googlechrome)](https://developer.chrome.com/docs/ai/built-in)
+[![Firebase AI Logic](https://img.shields.io/badge/Firebase_AI_Logic-Hybrid_Inference-FFCA28.svg?logo=firebase)](https://firebase.google.com/docs/ai-logic)
 
-> **Built for the official Google #BuildHybridAI 2026 Hackathon on Devpost.**  
-> Powered by **Firebase AI Logic** with Hybrid On-Device Inference (`prefer_on_device` via Chrome's Built-in **Gemini Nano** + automatic cloud fallback to **Gemini 1.5 Flash**).
+> **Live Demo:** [https://alfredoalvarado53-ui.github.io/omniaudit-ai/](https://alfredoalvarado53-ui.github.io/omniaudit-ai/)
 
----
-
-## 🌟 Overview & Value Proposition
-
-Auditing contracts, financial records, medical transcripts, or technical specifications usually forces developers and enterprises to make an unacceptable trade-off:
-* **Upload sensitive data to public cloud APIs**, risking privacy breaches (GDPR, HIPAA, attorney-client privilege).
-* **Rely on dumb regex rules offline**, losing the nuance of real LLM reasoning.
-
-**OmniAudit AI solves this dilemma through Hybrid AI:**
-1. **On-Device First (Zero Latency, Zero Cost, 100% Privacy):**  
-   Chrome's local **Gemini Nano** runs right inside the browser to sanitize Personally Identifiable Information (PII), detect red-flag clauses, and compute instant risk scores — without sending a single byte over the wire.
-2. **Intelligent Cloud Fallback via Firebase AI Logic:**  
-   When complex multi-page legal cross-references or long documents require broader reasoning, the cleaned, sanitized structure escalates to **Gemini 1.5 Flash** in the cloud through Firebase AI Logic, secured with **Firebase App Check**.
-
----
-
-## 🏗️ Technical Architecture
-
-```mermaid
-flowchart LR
-    Doc["Sensitive Document / Contract"] --> WebApp["OmniAudit Web App (Chrome 139+)"]
-    
-    WebApp --> Engine{"Firebase AI Logic\nmode: 'prefer_on_device'"}
-    
-    Engine -->|On-Device Prompt API| Nano["Gemini Nano Local\n• 50ms latency\n• PII sanitization\n• $0 cost & offline capable"]
-    
-    Engine -->|Cloud Fallback| CloudFlash["Gemini 1.5 Flash (Cloud)\n• Deep legal cross-referencing\n• Long-context audit\n• Firebase App Check protected"]
-    
-    Nano --> Report["Unified Audit Report + Executive Risk Matrix"]
-    CloudFlash --> Report
-```
+OmniAudit AI is an enterprise-grade legal & compliance workstation inspired by **Ironclad AI Assist**, **Robin AI**, and **LegalOn**. Designed for the **#BuildHybridAI 2026 Hackathon**, it combines local on-device privacy (via Chrome Built-in AI / Gemini Nano) with cloud synthesis (via Firebase AI Logic / Gemini 1.5 Flash).
 
 ---
 
 ## 🚀 Key Features
 
-* **Real-Time Hybrid Badge:** Clear visual indicator showing whether the inference was computed **100% On-Device (Gemini Nano)** or via **Cloud Fallback (Gemini Flash)** with measured latency in milliseconds.
-* **Instant PII Sanitizer:** Automatically redacts names, identity numbers, credit cards, and addresses locally before any optional cloud escalation.
-* **Legal & Compliance Risk Matrix:** Categorizes clauses into High, Medium, and Low risk with actionable remediation suggestions.
-* **Executive Summary Generator:** Produces exportable audit reports (Markdown / PDF / Text).
-* **Fully Compliant with Hackathon Rules:** Built on modern Web standards, utilizes official Firebase AI Logic APIs, includes Apache 2.0 license, and ready for deployment on Firebase Hosting.
+* **Auto-Sensing Hybrid Topology:** Automatically listens to 
+avigator.onLine and network telemetry. When offline or processing sensitive/PII data, execution shifts automatically to on-device Gemini Nano with 0 bytes transmitted over the wire.
+* **Corporate Playbooks Library:** Audit against SaaS Vendor Agreements, GDPR/DPA Data Protection, Enterprise NDAs, or SOC2 Compliance standards.
+* **Interactive Risk Matrix & Health Scoring:** Real-time 0–100 compliance health meter with dynamic color ramps and categorical risk breakdown (Critical, High, Medium, Low).
+* **Smart Redline Comparison Studio:** Side-by-side clause revision displaying counterparty drafts vs. attorney-approved revisions with inline strike-throughs and amendment insertions.
+* **Client-Side PII Redaction Table:** Transparently highlights redacted emails, bank accounts, and corporate identifiers before any processing occurs.
 
 ---
 
-## 💻 Tech Stack
+## 🏛 Architecture
 
-* **Frontend:** Modern Vanilla ES6+ Modules, HTML5, Tailwind CSS (Zero heavy bundler overhead, instant browser execution).
-* **Local Inference:** Chrome Built-in AI (`window.ai` / Prompt API via Gemini Nano).
-* **Cloud & Hybrid Orchestration:** **Firebase AI Logic SDK** (`@firebase/ai-logic` or Google AI Backend).
-* **Security:** **Firebase App Check** (debug token supported for local judge testing).
-* **Hosting:** Firebase Hosting (`https://omniaudit-ai.web.app`).
+`mermaid
+flowchart TD
+    A[Contract Ingestion: Text or Drag-and-Drop] --> B[Client-Side Privacy Engine]
+    B --> C[PII Redaction: Emails, Cards, Identifiers]
+    C --> D{Network Telemetry & Connectivity}
+    D -- Offline or Sensitive Mode --> E[On-Device Gemini Nano: Chrome Built-in AI]
+    D -- Online Standard Mode --> F[Firebase AI Logic: Gemini 1.5 Flash]
+    E --> G[Standardized Audit Synthesis]
+    F --> G
+    G --> H[Risk Matrix & Score]
+    G --> I[Ironclad-Style Redline Engine]
+    G --> J[Executive Audit Report & Export]
+`
 
 ---
 
-## 🛠️ Getting Started (Local Development & Testing)
+## 🛠 Getting Started
 
-### Prerequisites
-1. **Google Chrome Desktop (v139+)**
-2. Enable on-device AI flags:
-   * Open `chrome://flags`
-   * Enable **Prompt API for Gemini Nano**
-   * Enable **Enables optimization guide on device**
-3. Verify model status in `chrome://components` (`Optimization Guide On Device Model`).
-
-### Running the App
-Clone the repository and serve the static files:
-```bash
-git clone https://github.com/alfredoalvarado53-ui/omniaudit-ai.git
-cd omniaudit-ai
-# Open index.html directly in Chrome, or serve with any local HTTP server:
-python -m http.server 8080
-```
-Navigate to `http://localhost:8080` in your Chrome browser.
+1. Visit the live platform: [https://alfredoalvarado53-ui.github.io/omniaudit-ai/](https://alfredoalvarado53-ui.github.io/omniaudit-ai/)
+2. To test Chrome Built-in AI locally:
+   * Open chrome://flags in Chrome Canary/Dev.
+   * Enable #prompt-api-for-gemini-nano and #optimization-guide-on-device-model.
+   * Relaunch Chrome.
+3. Select a corporate playbook or sample contract, and click **Ejecutar Auditoría Híbrida**.
 
 ---
 
 ## 📄 License
-This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
+Licensed under the [Apache License, Version 2.0](LICENSE).
