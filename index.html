@@ -39,6 +39,13 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js for True Client-Side Document Parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
 
   <style>
     /* Godly / Framer Inspired Ambient Background & Grids */
@@ -215,7 +222,7 @@
             <span class="text-[11px] text-zinc-400 hidden md:flex items-center gap-1 font-medium">
               Enterprise Hybrid Legal Intelligence
               <span class="text-zinc-600">·</span>
-              <span class="text-zinc-500">Zero-Leak Privacy</span>
+              <span class="text-zinc-500">Client-Side Sanitized & On-Device First</span>
             </span>
           </div>
         </a>
@@ -338,13 +345,13 @@
 
         <!-- Drag & Drop Zone / Upload Input -->
         <div id="dropZone" class="group border border-dashed border-white/[0.12] hover:border-cyan-500/50 hover:bg-cyan-950/20 bg-white/[0.02] rounded-xl p-3.5 mb-3 text-center transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
-          <input type="file" id="fileUpload" accept=".txt,.md,.json,.pdf,.doc,.docx" class="hidden" />
+          <input type="file" id="fileUpload" accept=".txt,.md,.json,.pdf" class="hidden" />
           <div class="w-7 h-7 rounded-lg bg-white/[0.04] group-hover:bg-cyan-500/20 flex items-center justify-center transition-colors">
             <i data-lucide="upload-cloud" class="w-4 h-4 text-zinc-400 group-hover:text-cyan-400 transition-colors"></i>
           </div>
           <div class="text-left">
             <span class="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors block">Upload or drop agreement</span>
-            <span class="text-[10px] text-zinc-500 block">Supports .txt, .md, .pdf, .docx</span>
+            <span class="text-[10px] text-zinc-500 block">Supports .txt, .md, .pdf (native page text extraction)</span>
           </div>
         </div>
 
