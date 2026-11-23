@@ -233,6 +233,7 @@ btnRunAudit.addEventListener("click", async () => {
   } finally {
     btnRunAudit.disabled = false;
     btnRunAudit.classList.remove("opacity-60", "cursor-not-allowed");
+    if (window.innerWidth < 1024) { setMobileView("score"); }
     refreshIcons();
   }
 });
@@ -421,4 +422,56 @@ btnCopyReport.addEventListener("click", () => {
   }
   navigator.clipboard.writeText(latestAuditResult.content);
   alert("Report copied to clipboard!");
+});
+
+
+// --- Mobile View Switching Logic ---
+const mobileTabEditor = document.getElementById('mobileTabEditor');
+const mobileTabScore = document.getElementById('mobileTabScore');
+const mobileTabResults = document.getElementById('mobileTabResults');
+
+const colEditor = document.getElementById('colEditor');
+const colScore = document.getElementById('colScore');
+const colResults = document.getElementById('colResults');
+
+function setMobileView(activeTab) {
+  if (window.innerWidth >= 1024) return; // Keep standard desktop 3-col grid
+
+  // Reset columns
+  colEditor.classList.add('hidden');
+  colScore.classList.add('hidden');
+  colResults.classList.add('hidden');
+
+  // Reset tab buttons
+  [mobileTabEditor, mobileTabScore, mobileTabResults].forEach(btn => {
+    if (btn) {
+      btn.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition text-slate-400 hover:text-white flex items-center justify-center gap-1';
+    }
+  });
+
+  if (activeTab === 'editor') {
+    colEditor.classList.remove('hidden');
+    if (mobileTabEditor) mobileTabEditor.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+  } else if (activeTab === 'score') {
+    colScore.classList.remove('hidden');
+    if (mobileTabScore) mobileTabScore.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+  } else if (activeTab === 'results') {
+    colResults.classList.remove('hidden');
+    if (mobileTabResults) mobileTabResults.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+  }
+}
+
+if (mobileTabEditor) mobileTabEditor.addEventListener('click', () => setMobileView('editor'));
+if (mobileTabScore) mobileTabScore.addEventListener('click', () => setMobileView('score'));
+if (mobileTabResults) mobileTabResults.addEventListener('click', () => setMobileView('results'));
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 1024) {
+    colEditor.classList.remove('hidden');
+    colScore.classList.remove('hidden');
+    colResults.classList.remove('hidden');
+  } else {
+    // default to editor on mobile if none selected
+    setMobileView('editor');
+  }
 });
