@@ -2,6 +2,7 @@ import { HybridAuditEngine } from "./engine.js";
 
 // DOM Elements
 const docText = document.getElementById("docText");
+const scanLaser = document.getElementById("scanLaser");
 const charCount = document.getElementById("charCount");
 const dropZone = document.getElementById("dropZone");
 const fileUpload = document.getElementById("fileUpload");
@@ -204,6 +205,7 @@ btnRunAudit.addEventListener("click", async () => {
 
   btnRunAudit.disabled = true;
   btnRunAudit.classList.add("opacity-60", "cursor-not-allowed");
+  if (scanLaser) scanLaser.classList.remove("hidden");
 
   viewReport.innerHTML = `
     <div class="h-64 flex flex-col items-center justify-center text-slate-400">
@@ -231,6 +233,7 @@ btnRunAudit.addEventListener("click", async () => {
     console.error(err);
     viewReport.innerHTML = `<div class="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-200">Error executing audit: ${err.message}</div>`;
   } finally {
+    if (scanLaser) scanLaser.classList.add("hidden");
     btnRunAudit.disabled = false;
     btnRunAudit.classList.remove("opacity-60", "cursor-not-allowed");
     if (window.innerWidth < 1024) { setMobileView("score"); }
@@ -307,8 +310,8 @@ function parseAndRenderFindings(doc, report) {
   // Cap score bounds
   score = Math.max(15, Math.min(score, 98));
 
-  // Update UI score
-  scoreNumber.textContent = score;
+  // Animated Score Counter (Framer Odometer Effect)
+  animateScoreCounter(score);
   scoreBar.style.width = `${score}%`;
 
   if (score >= 80) {
@@ -325,11 +328,11 @@ function parseAndRenderFindings(doc, report) {
     riskVerdictBadge.textContent = "High Risk (Hostile Terms)";
   }
 
-  // Render Findings Cards
+  // Render Findings Cards with Staggered Slide-Up Entrance
   findingCountBadge.textContent = `${findings.length} findings`;
   if (findings.length === 0) {
     findingsContainer.innerHTML = `
-      <div class="h-48 flex flex-col items-center justify-center text-emerald-400 text-xs text-center p-4">
+      <div class="h-48 flex flex-col items-center justify-center text-emerald-400 text-xs text-center p-4 animate-card-in">
         <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
           <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
         </div>
@@ -340,12 +343,12 @@ function parseAndRenderFindings(doc, report) {
   } else {
     findingsContainer.innerHTML = findings
       .map(
-        (f) => `
-        <div class="p-3.5 rounded-xl border ${
+        (f, idx) => `
+        <div class="animate-card-in p-3.5 rounded-xl border ${
           f.severity === "HIGH"
             ? "border-rose-500/25 bg-rose-500/[0.04] text-rose-100 hover:border-rose-500/40 hover:bg-rose-500/[0.07]"
             : "border-amber-500/25 bg-amber-500/[0.04] text-amber-100 hover:border-amber-500/40 hover:bg-amber-500/[0.07]"
-        } transition-all">
+        } transition-all" style="animation-delay: ${idx * 90}ms;">
           <div class="flex items-center justify-between mb-1.5">
             <span class="font-bold text-xs flex items-center gap-1.5 text-zinc-100">
               <i data-lucide="${f.severity === "HIGH" ? "alert-circle" : "alert-triangle"}" class="w-3.5 h-3.5 ${f.severity === "HIGH" ? "text-rose-400" : "text-amber-400"}"></i>
@@ -374,10 +377,30 @@ function parseAndRenderFindings(doc, report) {
   renderSmartRedline(doc, findings);
 }
 
+// Number Counter Easing Animation
+function animateScoreCounter(targetScore) {
+  const duration = 850;
+  const start = parseInt(scoreNumber.textContent) || 0;
+  const startTime = performance.now();
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(start + (targetScore - start) * ease);
+    scoreNumber.textContent = current;
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      scoreNumber.textContent = targetScore;
+    }
+  }
+  requestAnimationFrame(update);
+}
+
 // Generate Redline View (Side-by-side or Strikethrough edits like Ironclad)
 function renderSmartRedline(originalText, findings) {
   let redlinedHtml = `
-    <div class="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] mb-3 text-xs text-zinc-400 flex items-start gap-2">
+    <div class="animate-card-in p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] mb-3 text-xs text-zinc-400 flex items-start gap-2">
       <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
       <div>
         <strong class="text-zinc-200">Automated Smart Redline:</strong> Hostile and uncalibrated clauses have been marked for deletion with calibrated fallback amendments suggested.
@@ -387,7 +410,7 @@ function renderSmartRedline(originalText, findings) {
 
   findings.forEach((f, idx) => {
     redlinedHtml += `
-      <div class="p-4 rounded-xl border border-white/[0.08] bg-zinc-950/80 font-mono text-xs space-y-2.5 shadow-sm">
+      <div class="animate-card-in p-4 rounded-xl border border-white/[0.08] bg-zinc-950/80 font-mono text-xs space-y-2.5 shadow-sm" style="animation-delay: ${idx * 110}ms;">
         <div class="text-zinc-300 font-bold flex items-center justify-between">
           <span class="text-zinc-200">Amendment #${idx + 1}: ${f.title}</span>
           <span class="text-[10px] text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/25">Ready to Apply</span>
