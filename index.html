@@ -2,23 +2,26 @@
 <html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>OmniAudit AI — Enterprise Hybrid Contract & Compliance Studio</title>
+  <meta name="description" content="Enterprise hybrid contract review and compliance studio with on-device Chrome Built-in AI (Gemini Nano) and Firebase AI Logic cloud fallback." />
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Marked for Markdown -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
   <style>
     .glass-card {
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(16px);
-      border: 1px solid rgba(51, 65, 85, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.45);
     }
     .custom-scroll::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
     }
     .custom-scroll::-webkit-scrollbar-track {
       background: rgba(15, 23, 42, 0.6);
@@ -30,58 +33,69 @@
     .custom-scroll::-webkit-scrollbar-thumb:hover {
       background: #475569;
     }
+    /* Smooth tab transition */
+    .tab-content-active {
+      display: flex !important;
+    }
+    /* Mobile-optimized touch targets */
+    @media (max-width: 640px) {
+      button, select, input, a {
+        min-height: 38px;
+      }
+    }
   </style>
 </head>
-<body class="min-h-full flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+<body class="min-h-full flex flex-col font-sans selection:bg-cyan-500 selection:text-white bg-slate-950">
 
   <!-- Top Global Header -->
   <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
       
       <!-- Brand & Version -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/25 shrink-0">
           <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-indigo-200 to-white bg-clip-text text-transparent">
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <span class="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-indigo-200 to-white bg-clip-text text-transparent">
               OmniAudit AI
             </span>
-            <span class="text-[10px] font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/80 px-2 py-0.5 rounded-full font-bold">
+            <span class="text-[9px] sm:text-[10px] font-mono uppercase bg-cyan-950/80 text-cyan-400 border border-cyan-800/80 px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
               Studio Pro
             </span>
           </div>
-          <span class="text-xs text-slate-400 font-mono hidden sm:inline">Enterprise Hybrid Contract Intelligence</span>
+          <span class="text-[11px] text-slate-400 font-mono hidden md:inline">Enterprise Hybrid Contract Intelligence</span>
         </div>
       </div>
 
       <!-- Live Network & Engine Telemetry -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5 sm:gap-2.5">
         <!-- Live Connection Status -->
-        <div id="netStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/60 shadow-sm transition">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span id="netStatusText">Online · Hybrid Ready</span>
+        <div id="netStatusBadge" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/60 shadow-sm transition">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+          <span id="netStatusText" class="truncate max-w-[110px] sm:max-w-none">Online · Hybrid</span>
         </div>
 
         <!-- Live Model / Engine Routing Badge -->
-        <div id="engineStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 shadow-sm">
-          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-          <span id="engineBadgeText">Detecting Nano / Cloud...</span>
+        <div id="engineStatusBadge" class="hidden xs:flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
+          <span id="engineBadgeText" class="truncate max-w-[90px] sm:max-w-none">Auto Engine</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Sub-Header: Playbook & Preset Bar -->
-  <section class="border-b border-slate-800/60 bg-slate-900/40 px-4 sm:px-6 lg:px-8 py-2.5">
-    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+  <!-- Sub-Header: Playbook & Quick Templates Bar (Scrollable on mobile) -->
+  <section class="border-b border-slate-800/60 bg-slate-900/50 px-3 sm:px-6 lg:px-8 py-2.5">
+    <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+      
       <!-- Playbook Selector -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-          <i data-lucide="book-open" class="w-3.5 h-3.5 text-cyan-400"></i> Audit Playbook:
+      <div class="flex items-center gap-2 w-full md:w-auto">
+        <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5 shrink-0">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 text-cyan-400"></i> <span class="hidden sm:inline">Audit</span> Playbook:
         </span>
-        <select id="playbookSelect" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-cyan-500 outline-none font-medium">
+        <select id="playbookSelect" class="w-full md:w-auto bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-cyan-500 outline-none font-medium transition cursor-pointer">
           <option value="standard_nda">Standard Mutual NDA (High PII & Penalty Guard)</option>
           <option value="enterprise_saas">Enterprise SaaS Master Services Agreement</option>
           <option value="employment_contract">Senior Tech Employment & IP Assignment</option>
@@ -89,57 +103,75 @@
         </select>
       </div>
 
-      <!-- Quick Document Templates -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-500 font-mono hidden md:inline">Quick Templates:</span>
-        <button id="btnTplNDA" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1">
-          <i data-lucide="file-text" class="w-3 h-3 text-cyan-400"></i> NDA w/ $500k Penalty
+      <!-- Quick Document Templates (Horizontal scroll on mobile) -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 custom-scroll no-scrollbar">
+        <span class="text-xs text-slate-500 font-mono hidden lg:inline shrink-0">Sample Templates:</span>
+        <button id="btnTplNDA" class="text-xs whitespace-nowrap px-2.5 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1 shrink-0 active:scale-95">
+          <i data-lucide="file-text" class="w-3 h-3 text-cyan-400"></i> NDA ($500k Penalty)
         </button>
-        <button id="btnTplSaaS" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1">
-          <i data-lucide="file-text" class="w-3 h-3 text-indigo-400"></i> SaaS 48h Down SLA
+        <button id="btnTplSaaS" class="text-xs whitespace-nowrap px-2.5 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1 shrink-0 active:scale-95">
+          <i data-lucide="file-text" class="w-3 h-3 text-indigo-400"></i> SaaS (48h Downtime)
         </button>
-        <button id="btnTplEmployment" class="text-xs px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1">
-          <i data-lucide="file-text" class="w-3 h-3 text-fuchsia-400"></i> 2-Yr Non-Compete
+        <button id="btnTplEmployment" class="text-xs whitespace-nowrap px-2.5 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center gap-1 shrink-0 active:scale-95">
+          <i data-lucide="file-text" class="w-3 h-3 text-fuchsia-400"></i> Employment (Non-Compete)
         </button>
       </div>
     </div>
   </section>
 
-  <!-- Main 3-Column Studio Layout -->
-  <main class="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <!-- Mobile View Selector Pills (Only visible on screens < 1024px) -->
+  <nav class="lg:hidden border-b border-slate-800 bg-slate-950/90 px-3 py-2 sticky top-16 z-40 backdrop-blur-md">
+    <div class="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+      <button id="mobileTabEditor" class="py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1">
+        <i data-lucide="file-edit" class="w-3.5 h-3.5"></i>
+        <span>1. Document</span>
+      </button>
+      <button id="mobileTabScore" class="py-1.5 text-xs font-semibold rounded-lg text-center transition text-slate-400 hover:text-white flex items-center justify-center gap-1">
+        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+        <span>2. Score</span>
+      </button>
+      <button id="mobileTabResults" class="py-1.5 text-xs font-semibold rounded-lg text-center transition text-slate-400 hover:text-white flex items-center justify-center gap-1">
+        <i data-lucide="split" class="w-3.5 h-3.5"></i>
+        <span>3. Redlines</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Studio Workspace (Responsive 3-Column on Desktop / Tabbed Stack on Mobile) -->
+  <main class="flex-1 max-w-[1600px] mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
 
     <!-- Column 1: Document Editor & File Ingestion (4 cols) -->
-    <div class="lg:col-span-4 flex flex-col gap-4">
-      <div class="glass-card rounded-2xl p-5 flex-1 flex flex-col">
+    <div id="colEditor" class="lg:col-span-4 flex flex-col gap-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col">
         
         <!-- Header with file drop and char count -->
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-2.5">
           <div class="flex items-center gap-2">
             <i data-lucide="file-code" class="w-4 h-4 text-cyan-400"></i>
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Target Document</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Contract Ingestion</h2>
           </div>
-          <span id="charCount" class="text-xs font-mono text-slate-500">0 characters</span>
+          <span id="charCount" class="text-xs font-mono text-slate-500">0 chars</span>
         </div>
 
         <!-- Drag & Drop Zone / Upload Input -->
-        <div id="dropZone" class="border border-dashed border-slate-700/80 hover:border-cyan-500/60 bg-slate-950/40 rounded-xl p-3 mb-3 text-center transition cursor-pointer flex items-center justify-center gap-2">
+        <div id="dropZone" class="border border-dashed border-slate-700/80 hover:border-cyan-500/60 bg-slate-950/40 rounded-xl p-3 mb-3 text-center transition cursor-pointer flex items-center justify-center gap-2 active:bg-slate-900">
           <input type="file" id="fileUpload" accept=".txt,.md,.json,.pdf,.doc,.docx" class="hidden" />
           <i data-lucide="upload-cloud" class="w-4 h-4 text-slate-400"></i>
-          <span class="text-xs text-slate-400 font-medium">Click to upload or drag & drop (TXT, MD, PDF)</span>
+          <span class="text-xs text-slate-400 font-medium">Click to upload or drag & drop</span>
         </div>
 
-        <!-- Textarea -->
+        <!-- Contract Textarea -->
         <textarea
           id="docText"
-          rows="18"
-          placeholder="Paste or upload agreement text here to audit..."
-          class="w-full flex-1 rounded-xl bg-slate-950/90 border border-slate-800 p-4 font-mono text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 custom-scroll leading-relaxed"
+          rows="14"
+          placeholder="Paste or upload contract text here to audit..."
+          class="w-full flex-1 min-h-[260px] sm:min-h-[340px] rounded-xl bg-slate-950/90 border border-slate-800 p-3 sm:p-4 font-mono text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 custom-scroll leading-relaxed"
         ></textarea>
 
         <!-- Audit Trigger Button -->
         <button
           id="btnRunAudit"
-          class="mt-4 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-indigo-700 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2 transition transform active:scale-[0.99]"
+          class="mt-3.5 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-indigo-700 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2 transition transform active:scale-[0.99] cursor-pointer"
         >
           <i data-lucide="play" class="w-4 h-4 fill-current"></i>
           <span>Run Autonomous Compliance Audit</span>
@@ -149,13 +181,13 @@
     </div>
 
     <!-- Column 2: Audit Analytics & Risk Matrix (4 cols) -->
-    <div class="lg:col-span-4 flex flex-col gap-4">
+    <div id="colScore" class="hidden lg:flex lg:col-span-4 flex-col gap-4">
 
       <!-- Risk Score Header Card -->
-      <div class="glass-card rounded-2xl p-5">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
         <div class="flex items-center justify-between mb-3">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i> Compliance Health Score
+            <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i> Health Score
           </span>
           <span id="riskVerdictBadge" class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300">
             Awaiting Audit
@@ -164,7 +196,7 @@
 
         <!-- Visual Risk Meter -->
         <div class="flex items-baseline gap-3 mb-2">
-          <span id="scoreNumber" class="text-3xl font-black text-white font-mono">--</span>
+          <span id="scoreNumber" class="text-3xl sm:text-4xl font-black text-white font-mono">--</span>
           <span class="text-xs text-slate-500">/ 100 Health Index</span>
         </div>
         <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
@@ -174,31 +206,31 @@
         <!-- Telemetry Breakdown -->
         <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/80 text-center font-mono">
           <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-            <span class="text-[10px] text-slate-400 block">ENGINE</span>
-            <span id="telemetryEngine" class="text-xs font-bold text-slate-200">--</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400 block uppercase">Engine</span>
+            <span id="telemetryEngine" class="text-[11px] sm:text-xs font-bold text-slate-200 truncate block">--</span>
           </div>
           <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-            <span class="text-[10px] text-slate-400 block">LATENCY</span>
-            <span id="telemetryLatency" class="text-xs font-bold text-cyan-400">-- ms</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400 block uppercase">Latency</span>
+            <span id="telemetryLatency" class="text-[11px] sm:text-xs font-bold text-cyan-400 block">-- ms</span>
           </div>
           <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-            <span class="text-[10px] text-slate-400 block">PRIVACY</span>
-            <span id="telemetryPrivacy" class="text-xs font-bold text-emerald-400">Zero-Cloud</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400 block uppercase">Privacy</span>
+            <span id="telemetryPrivacy" class="text-[11px] sm:text-xs font-bold text-emerald-400 block">Zero-Cloud</span>
           </div>
         </div>
       </div>
 
       <!-- Real-time Risk Findings List -->
-      <div class="glass-card rounded-2xl p-5 flex-1 flex flex-col">
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
           <div class="flex items-center gap-1.5">
             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Identified Risk Findings</h3>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Identified Findings</h3>
           </div>
           <span id="findingCountBadge" class="text-[10px] font-mono bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">0 findings</span>
         </div>
 
-        <div id="findingsContainer" class="flex-1 overflow-y-auto custom-scroll space-y-2.5 pr-1">
+        <div id="findingsContainer" class="flex-1 overflow-y-auto custom-scroll space-y-2.5 pr-1 max-h-[460px]">
           <div class="h-44 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
             <i data-lucide="check-circle" class="w-8 h-8 text-slate-700 mb-2"></i>
             <span>No risks detected yet. Run an audit to populate clause findings.</span>
@@ -209,33 +241,33 @@
     </div>
 
     <!-- Column 3: Redline Comparison & Export Studio (4 cols) -->
-    <div class="lg:col-span-4 flex flex-col gap-4">
-      <div class="glass-card rounded-2xl p-5 flex-1 flex flex-col">
+    <div id="colResults" class="hidden lg:flex lg:col-span-4 flex-col gap-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col min-h-[380px]">
         
         <!-- Tabs: Executive Report vs Smart Redline -->
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3 gap-2">
           <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-            <button id="tabReport" class="px-3 py-1 rounded-md text-xs font-medium bg-slate-800 text-white transition">
-              Executive Report
+            <button id="tabReport" class="px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium bg-slate-800 text-white transition cursor-pointer">
+              Report
             </button>
-            <button id="tabRedline" class="px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">
-              Smart Redline
+            <button id="tabRedline" class="px-2.5 sm:px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition cursor-pointer">
+              Smart Redlines
             </button>
           </div>
 
           <!-- Export Actions -->
           <div class="flex items-center gap-1.5">
-            <button id="btnExportMarkdown" title="Export Markdown" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition">
+            <button id="btnExportMarkdown" title="Export Markdown" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition active:scale-95 cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
             </button>
-            <button id="btnCopyReport" title="Copy to Clipboard" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition">
+            <button id="btnCopyReport" title="Copy to Clipboard" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition active:scale-95 cursor-pointer">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
 
         <!-- View 1: Markdown Report View -->
-        <div id="viewReport" class="flex-1 overflow-y-auto custom-scroll text-xs text-slate-300 leading-relaxed pr-2 prose prose-invert prose-cyan max-w-none">
+        <div id="viewReport" class="flex-1 overflow-y-auto custom-scroll text-xs text-slate-300 leading-relaxed pr-2 prose prose-invert prose-cyan max-w-none max-h-[500px]">
           <div class="h-64 flex flex-col items-center justify-center text-slate-500 text-center p-4">
             <i data-lucide="file-search" class="w-10 h-10 text-slate-700 mb-3"></i>
             <p class="font-medium text-slate-400">Awaiting Analysis</p>
@@ -244,7 +276,7 @@
         </div>
 
         <!-- View 2: Redline Comparison View (Hidden by default) -->
-        <div id="viewRedline" class="hidden flex-1 overflow-y-auto custom-scroll text-xs text-slate-300 leading-relaxed space-y-3 pr-2">
+        <div id="viewRedline" class="hidden flex-1 overflow-y-auto custom-scroll text-xs text-slate-300 leading-relaxed space-y-3 pr-2 max-h-[500px]">
           <!-- Populated dynamically with side-by-side or strike-through revisions -->
         </div>
 
@@ -254,9 +286,9 @@
   </main>
 
   <!-- Footer Info -->
-  <footer class="border-t border-slate-900 bg-slate-950 py-3.5 px-6 text-center text-xs text-slate-500 flex items-center justify-between max-w-[1600px] mx-auto w-full">
+  <footer class="border-t border-slate-900 bg-slate-950/90 py-3.5 px-4 sm:px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1600px] mx-auto w-full">
     <span>OmniAudit AI · Built for the Google <strong class="text-slate-400">#BuildHybridAI 2026</strong> Hackathon</span>
-    <span class="font-mono text-slate-600">Apache 2.0 Open Source · Firebase AI Logic</span>
+    <span class="font-mono text-slate-600 text-[11px]">Apache 2.0 Open Source · Chrome Built-in AI & Firebase</span>
   </footer>
 
   <!-- App Script -->
