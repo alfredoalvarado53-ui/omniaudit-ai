@@ -112,7 +112,33 @@ fileUpload.addEventListener("change", (e) => {
   }
 });
 
-function readFile(file) {
+async function readFile(file) {
+  if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+    try {
+      charCount.textContent = "Extracting text from PDF...";
+      if (!window.pdfjsLib) {
+        alert("PDF parser is still loading. Please try again in a few moments.");
+        return;
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStr = textContent.items.map((item) => item.str).join(" ");
+        fullText += `--- Page ${i} ---\n${pageStr}\n\n`;
+      }
+      docText.value = fullText.trim();
+      charCount.textContent = `${docText.value.length} characters (${pdf.numPages} PDF pages extracted)`;
+      return;
+    } catch (err) {
+      console.error("PDF extraction error:", err);
+      alert("Failed to parse PDF document: " + err.message);
+      return;
+    }
+  }
+
   const reader = new FileReader();
   reader.onload = (e) => {
     docText.value = e.target.result;
@@ -224,10 +250,10 @@ btnRunAudit.addEventListener("click", async () => {
     // Update Telemetry
     telemetryEngine.textContent = result.model;
     telemetryLatency.textContent = `${result.latencyMs} ms`;
-    telemetryPrivacy.textContent = result.isPrivateZeroCloud ? "100% On-Device" : "Hybrid Cloud";
+    telemetryPrivacy.textContent = result.isPrivateZeroCloud ? "100% On-Device" : "Client-Side Sanitized";
 
-    // Analyze Risk & Extract Findings
-    parseAndRenderFindings(text, result.content);
+    // Render Structured Findings & Risk Matrix derived directly from AI Model Output
+    renderStructuredFindings(result.structuredData);
 
   } catch (err) {
     console.error(err);
@@ -241,74 +267,13 @@ btnRunAudit.addEventListener("click", async () => {
   }
 });
 
-// Dynamic Risk Scorer and Redline Generator
-function parseAndRenderFindings(doc, report) {
-  const findings = [];
-  let score = 95;
+// AI Model-Driven Structured Risk Findings & Redlines Renderer
+function renderStructuredFindings(data) {
+  if (!data) return;
 
-  // 1. Penalty clauses
-  if (/500,000|\$500k|unlimited liability/i.test(doc)) {
-    score -= 35;
-    findings.push({
-      severity: "HIGH",
-      title: "Extreme Liquidated Damages & Unlimited Liability",
-      desc: "Contract forces immediate $500,000 USD penalty and unlimited damages without requiring proof of actual harm.",
-      clause: "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-      fix: "Cap total liability to 12 months of fees actually paid; strike liquidated damages.",
-    });
-  }
-
-  // 2. Unilateral Termination
-  if (/0 days notice|immediately at its sole discretion/i.test(doc)) {
-    score -= 20;
-    findings.push({
-      severity: "HIGH",
-      title: "Zero-Notice Unilateral Termination",
-      desc: "One party can kill the agreement instantly with zero cure period.",
-      clause: "Reserves the right to terminate immediately with 0 days prior notice...",
-      fix: "Require minimum 30 days written notice with 15-day opportunity to cure breaches.",
-    });
-  }
-
-  // 3. PII Detection
-  const piiMatches = doc.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(\d{3}-\d{2}-\d{4})|([A-Z]{4}\d{6}-[A-Z0-9]{3})/g);
-  if (piiMatches && piiMatches.length > 0) {
-    score -= 15;
-    findings.push({
-      severity: "MEDIUM",
-      title: `Cleartext PII Detected (${piiMatches.length} items)`,
-      desc: `Contains unredacted personal identifiers: ${piiMatches.slice(0, 3).join(", ")}.`,
-      clause: "Party personal emails and tax/SSN identifiers.",
-      fix: "Enforce automated local sanitization before document distribution.",
-    });
-  }
-
-  // 4. Low SLA or extreme caps
-  if (/48 consecutive hours|under \$100|lesser of \$50/i.test(doc)) {
-    score -= 25;
-    findings.push({
-      severity: "HIGH",
-      title: "Disproportionate Liability Ceiling ($50 USD)",
-      desc: "Provider disclaims all liability for outages under 48 hours and caps damages to an absurd $50.",
-      clause: "Provider's total maximum aggregate liability... capped at $50 USD...",
-      fix: "Standard enterprise floor should be at least total annual contract value.",
-    });
-  }
-
-  // 5. Non-compete
-  if (/two \(2\) full years|worldwide/i.test(doc)) {
-    score -= 25;
-    findings.push({
-      severity: "HIGH",
-      title: "Overly Broad Worldwide Non-Compete",
-      desc: "Two-year global restriction is legally unenforceable in multiple jurisdictions and severely harms engineer mobility.",
-      clause: "For a period of two (2) full years worldwide...",
-      fix: "Restrict scope to direct competitors within 50 miles, or limit duration to 6 months.",
-    });
-  }
-
-  // Cap score bounds
-  score = Math.max(15, Math.min(score, 98));
+  const score = data.healthScore !== undefined ? data.healthScore : 75;
+  const findings = data.findings || [];
+  const redlines = data.redlines || [];
 
   // Animated Score Counter (Framer Odometer Effect)
   animateScoreCounter(score);
@@ -317,15 +282,15 @@ function parseAndRenderFindings(doc, report) {
   if (score >= 80) {
     scoreBar.className = "h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(16,185,129,0.5)]";
     riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25";
-    riskVerdictBadge.textContent = "Low Risk (Favorable)";
+    riskVerdictBadge.textContent = data.riskVerdict || "Low Risk (Favorable)";
   } else if (score >= 50) {
     scoreBar.className = "h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.5)]";
     riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25";
-    riskVerdictBadge.textContent = "Moderate Risk (Amendments Recommended)";
+    riskVerdictBadge.textContent = data.riskVerdict || "Moderate Risk (Amendments Recommended)";
   } else {
     scoreBar.className = "h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]";
     riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/25";
-    riskVerdictBadge.textContent = "High Risk (Hostile Terms)";
+    riskVerdictBadge.textContent = data.riskVerdict || "High Risk (Hostile Terms)";
   }
 
   // Render Findings Cards with Staggered Slide-Up Entrance
@@ -373,8 +338,8 @@ function parseAndRenderFindings(doc, report) {
       .join("");
   }
 
-  // Populate Smart Redline View
-  renderSmartRedline(doc, findings);
+  // Populate Smart Redline View directly from model output
+  renderSmartRedline(redlines);
 }
 
 // Number Counter Easing Animation
@@ -398,17 +363,17 @@ function animateScoreCounter(targetScore) {
 }
 
 // Generate Redline View (Side-by-side or Strikethrough edits like Ironclad)
-function renderSmartRedline(originalText, findings) {
+function renderSmartRedline(redlines) {
   let redlinedHtml = `
     <div class="animate-card-in p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] mb-3 text-xs text-zinc-400 flex items-start gap-2">
       <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
       <div>
-        <strong class="text-zinc-200">Automated Smart Redline:</strong> Hostile and uncalibrated clauses have been marked for deletion with calibrated fallback amendments suggested.
+        <strong class="text-zinc-200">Automated Smart Redline (Ironclad / Robin AI Standard):</strong> Hostile and uncalibrated clauses have been marked for deletion with calibrated fallback amendments suggested.
       </div>
     </div>
   `;
 
-  findings.forEach((f, idx) => {
+  (redlines || []).forEach((f, idx) => {
     redlinedHtml += `
       <div class="animate-card-in p-4 rounded-xl border border-white/[0.08] bg-zinc-950/80 font-mono text-xs space-y-2.5 shadow-sm" style="animation-delay: ${idx * 110}ms;">
         <div class="text-zinc-300 font-bold flex items-center justify-between">
@@ -416,10 +381,10 @@ function renderSmartRedline(originalText, findings) {
           <span class="text-[10px] text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/25">Ready to Apply</span>
         </div>
         <div class="p-2.5 rounded-lg bg-rose-500/[0.08] border border-rose-500/25 text-rose-300 line-through">
-          ${f.clause}
+          ${f.clause || f.original}
         </div>
         <div class="p-2.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 font-medium">
-          + ${f.fix}
+          + ${f.fix || f.proposed}
         </div>
       </div>
     `;
