@@ -17,15 +17,16 @@
 
 ## 🌟 What Was Built for #BuildHybridAI 2026
 
-OmniAudit AI was built from the ground up for the Google **#BuildHybridAI 2026** Hackathon to solve enterprise legal and compliance auditing through true hybrid inference:
+OmniAudit AI was engineered specifically for the Google **#BuildHybridAI 2026** Hackathon to solve enterprise legal and compliance auditing through true hybrid inference:
 
-1. **`engine.js` (Hybrid Orchestrator):** Implements `prefer_on_device` routing between on-device Chrome Built-in AI (**Gemini Nano**) and cloud escalation via **Firebase AI Logic** (**Gemini 1.5 Flash**), protected by **Firebase App Check**.
-2. **Client-Side In-Memory PII Sanitizer:** Intercepts and tokenizes personal emails, tax identifiers (SSN, RFC, CURP), payment card numbers, and phone numbers before any text can be transmitted to the cloud. Raw PII is never sent across the network or logged.
-3. **Structured Model-Driven Output:** Instructs models to output validated JSON (`healthScore`, `riskVerdict`, `findings`, `redlines`) alongside an executive Markdown report. The UI renders directly from the model's structured tokens.
-4. **Playbook Awareness:** Injects specific enterprise compliance rules into the model prompt according to the active playbook selector (**Standard NDA**, **Enterprise SaaS MSA**, **Senior Tech Employment**, or **Vendor Procurement**).
-5. **Native PDF Document Ingestion:** Uses client-side **PDF.js** to parse digital text page-by-page. Automatically detects scanned image PDFs that require OCR and prompts the user accordingly.
-6. **Framer & Godly Studio UI:** Ultra-modern dark obsidian layout with responsive 3-column analysis on desktop, segmented touch controls on mobile, ambient floating auroras, and DOMPurify XSS sanitization.
-7. **Automated CI/CD Workflow (`.github/workflows/deploy.yml`):** Automatically injects public Firebase configuration from GitHub Secrets / Variables during deployment without committing credentials to version control.
+1. **`engine.js` (Hybrid Orchestrator):** Implements `prefer_on_device` routing between on-device Chrome Built-in AI (**Gemini Nano**) and cloud escalation via **Firebase AI Logic** (**Gemini 1.5 Flash**), strictly protected by **Firebase App Check**.
+2. **Mandatory App Check Pre-flight:** App Check initialization is an absolute prerequisite on the public web. Firebase AI Logic is never marked ready or called unless App Check is validly configured.
+3. **Live Evaluator Mode (Safe JSON Only):** Evaluators can test their own Firebase project directly in the live browser via the **⚙️ Configuración / Proyecto Firebase** modal. Credentials are parsed strictly as JSON (no dynamic code evaluation or `new Function`) and stored exclusively in temporary `sessionStorage`.
+4. **Client-Side In-Memory PII Sanitizer:** Intercepts and tokenizes personal emails, tax identifiers (SSN, RFC, CURP), payment card numbers, and phone numbers before any text can be transmitted to the cloud. Raw PII is never sent across the network or logged.
+5. **Honest Model-Driven Structured Output:** Instructs the model to output validated JSON (`healthScore`, `riskVerdict`, `findings`, `redlines`) alongside an executive Markdown report. If the model returns an invalid JSON block, the full Markdown report renders safely without fabricating artificial scores or findings.
+6. **Playbook Awareness:** Injects specific enterprise compliance rules into the model prompt according to the active playbook selector (**Standard NDA**, **Enterprise SaaS MSA**, **Senior Tech Employment**, or **Vendor Procurement**).
+7. **Native PDF Document Ingestion:** Uses client-side **PDF.js** to parse digital text page-by-page. Automatically detects scanned image PDFs that require OCR and prompts the user accordingly.
+8. **Framer & Godly Studio UI:** Ultra-modern dark obsidian layout with responsive 3-column analysis on desktop, segmented touch controls on mobile, ambient floating auroras, and DOMPurify XSS sanitization.
 
 ---
 
@@ -38,11 +39,13 @@ flowchart TD
     
     LocalSanitizer --> EngineRouter{"HybridAuditEngine\n(mode: 'prefer_on_device')"}
     
-    EngineRouter -->|Chrome AI Ready| NanoNode["On-Device Chrome Built-in AI\n(window.ai / Gemini Nano)\n• 0 bytes sent over network\n• Sub-50ms latency\n• 100% Local Inference"]
+    EngineRouter -->|Chrome AI Available| NanoNode["On-Device Chrome Built-in AI\n(window.ai / Gemini Nano)\n• 0 bytes sent over network\n• Sub-50ms latency\n• 100% Local Inference"]
     
-    EngineRouter -->|Cloud Escalation| CloudNode["Firebase AI Logic\n(firebase-vertexai / Gemini 1.5 Flash)\n• Protected by Firebase App Check\n• ONLY Pre-Sanitized Payload Sent\n• Real Model Invocation"]
+    EngineRouter -->|Cloud Escalation| AppCheckGate{"App Check Verification\n(reCAPTCHA v3 / Enterprise)"}
+    AppCheckGate -->|Passed & Enforced| CloudNode["Firebase AI Logic\n(firebase-vertexai / Gemini 1.5 Flash)\n• Protected by Firebase App Check\n• ONLY Pre-Sanitized Payload Sent\n• Real Model Invocation"]
+    AppCheckGate -->|Unconfigured / Failed| ErrorBlock["Actionable Error Alert\n(Blocks cloud call; never fakes AI)"]
     
-    EngineRouter -->|Explicit Demo Option| DemoNode["Demo Local Estático (Sin IA)\n• Rule-based reference benchmark\n• Transparently labeled"]
+    EngineRouter -->|Explicit Demo Option| DemoNode["Demo local · sin IA\n• Rule-based reference benchmark\n• Transparently labeled"]
     
     NanoNode --> StructuredOutput["Model-Driven Structured JSON Output\n(Health Score + Risk Verdict + Findings + Redlines)"]
     CloudNode --> StructuredOutput
@@ -54,117 +57,133 @@ flowchart TD
 
 ## 🔬 Firebase AI Logic & App Check Runtime Implementation
 
-OmniAudit AI imports and invokes the official web SDK directly in `engine.js`:
+OmniAudit AI imports and invokes the official web SDK directly in `engine.js` (Modular SDK v11.4):
 
 ```javascript
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { initializeApp, deleteApp, getApps } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app-check.js";
 import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-vertexai.js";
 
-// Reads credentials from untracked firebase-config.js, GitHub Actions build, or browser sessionStorage
+// Clean previous instances to prevent 'app/duplicate-app' errors
+await resetFirebase();
+
+// 1. Initialize core Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize App Check prior to calling AI Logic
-if (appCheckConfig.isLocalDebug && isLocalhost) {
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-if (appCheckConfig.recaptchaSiteKey) {
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(appCheckConfig.recaptchaSiteKey),
+// 2. Initialize App Check BEFORE any Vertex AI service is instantiated
+if (hasValidSiteKey) {
+  const appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(recaptchaSiteKey),
     isTokenAutoRefreshEnabled: true,
   });
 }
 
-// Initialize Firebase AI Logic (Vertex AI in Firebase)
+// 3. Initialize Firebase AI Logic (Vertex AI in Firebase)
 const vertexAI = getVertexAI(app);
 const model = getGenerativeModel(vertexAI, {
   model: "gemini-1.5-flash",
   generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
 });
 
-// Sanitized execution: ONLY client-redacted text is sent
+// 4. Client-side sanitized execution: ONLY client-redacted text is sent
 const sanitization = sanitizePIILocally(rawText);
 const prompt = `${systemPrompt}\n\nDocument to audit (Pre-sanitized on client):\n${sanitization.sanitizedText}`;
 const response = await model.generateContent(prompt);
+
+// 5. Verification status updates to 'verified' ONLY upon a successful response
 ```
 
 ---
 
-## 🛠️ Step-by-Step Evaluator & Configuration Guide
+## 🛠️ Evaluator Guide: Testing with Your Own Firebase Project
 
-### Option 1: Instant In-Browser Evaluation (Live on GitHub Pages)
-If you want to test the live hosted URL at [https://alfredoalvarado53-ui.github.io/omniaudit-ai/](https://alfredoalvarado53-ui.github.io/omniaudit-ai/) with your own Firebase project:
-1. Open the URL in any modern browser.
-2. Click the **⚙️ Settings icon** in the top navigation bar.
-3. Paste your Firebase Web Config object (e.g., from Firebase Console > Project Settings > Your Apps).
-4. *(Optional)* Paste your reCAPTCHA v3 or Enterprise Site Key if you enabled App Check on your domain.
-5. Click **"Guardar en Sesión y Recargar"**. Credentials are saved **strictly in your browser's local `sessionStorage`** and are never shared.
-6. Click **"Run Autonomous Compliance Audit (AI)"** to invoke Gemini 1.5 Flash live.
+You can test the live hosted application directly at **[https://alfredoalvarado53-ui.github.io/omniaudit-ai/](https://alfredoalvarado53-ui.github.io/omniaudit-ai/)** without modifying the code or repository.
 
----
-
-### Option 2: Configuring Firebase Console & GitHub Actions Deployment
-
-If you are deploying your own fork of OmniAudit AI:
-
-#### 1. In Firebase Console:
-1. Create or open a project at [Firebase Console](https://console.firebase.google.com/).
-2. Add a **Web App** (`</>`) and copy the configuration snippet.
-3. Enable **Vertex AI in Firebase (Firebase AI Logic)**:
-   * Go to **Build > Vertex AI in Firebase** and click **Get Started**.
-   * Ensure billing is enabled (Vertex AI includes free tier allowances).
-4. Configure **Firebase App Check**:
+### Step 1: Prepare Your Firebase Project
+1. Open the [Firebase Console](https://console.firebase.google.com/) and create or select a project.
+2. Ensure the project is on the **Blaze** plan (pay-as-you-go, required for Vertex AI in Firebase; Google provides generous monthly free quotas).
+3. **Enable Vertex AI in Firebase:**
+   * In the left sidebar, navigate to **Build > Vertex AI in Firebase**.
+   * Click **Get Started** to enable the required APIs (`firebasevertexai.googleapis.com`).
+4. **Configure App Check:**
    * Go to **Build > App Check > Apps**.
-   * Register your domain (e.g. `your-username.github.io`).
-   * Select **reCAPTCHA Enterprise** or **reCAPTCHA v3** and obtain your public Site Key.
+   * Select your Web App.
+   * Choose **reCAPTCHA v3** (or reCAPTCHA Enterprise).
+   * In the [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin), create a reCAPTCHA v3 key pair and add the domain **`alfredoalvarado53-ui.github.io`** (and `localhost` if testing locally).
+   * Enter the secret key into Firebase Console, and copy the **Public Site Key**.
+   * In the **APIs** tab of App Check, enforce protection for **Vertex AI in Firebase**.
+5. **Get Your Firebase Web Config:**
+   * In Firebase Console, go to **Project Settings (⚙️) > General > Your Apps**.
+   * Copy the `firebaseConfig` JSON object containing `apiKey`, `projectId`, `authDomain`, `appId`.
 
-#### 2. In GitHub Repository Settings:
-Go to **Settings > Secrets and variables > Actions**:
-* Add Repository Variables/Secrets:
-  * `FIREBASE_API_KEY`: Your Firebase Web API Key (public web identifier).
-  * `FIREBASE_PROJECT_ID`: Your Firebase project ID.
-  * `FIREBASE_AUTH_DOMAIN`: `your-project-id.firebaseapp.com`.
-  * `FIREBASE_STORAGE_BUCKET`: `your-project-id.firebasestorage.app`.
-  * `FIREBASE_MESSAGING_SENDER_ID`: Your sender ID.
-  * `FIREBASE_APP_ID`: Your web app ID.
-  * `RECAPTCHA_SITE_KEY`: (Optional) Public site key for reCAPTCHA App Check.
-* On the next push to `main` (or via **Actions > Deploy OmniAudit AI > Run workflow**), GitHub Actions automatically generates `firebase-config.js` and publishes it to GitHub Pages.
+### Step 2: Paste into the Live Evaluator Modal
+1. Open [https://alfredoalvarado53-ui.github.io/omniaudit-ai/](https://alfredoalvarado53-ui.github.io/omniaudit-ai/).
+2. Click the **⚙️ Configuración / Proyecto Firebase** button in the top header.
+3. Paste your Web Config JSON into the textarea. Example:
+   ```json
+   {
+     "apiKey": "AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "authDomain": "my-audit-project.firebaseapp.com",
+     "projectId": "my-audit-project",
+     "storageBucket": "my-audit-project.firebasestorage.app",
+     "appId": "1:123456789012:web:abcdef1234567890"
+   }
+   ```
+4. Enter your public **reCAPTCHA Site Key** in the App Check input.
+5. Click **"Guardar en Sesión y Recargar"**.
+   * Credentials are saved **strictly in browser `sessionStorage`** (never sent to any external server or saved in localStorage).
+   * The application refreshes and displays your project: `Firebase AI Logic · my-audit-project` with `App Check Configurado (Pendiente)`.
 
-> **Security Note:** Firebase Web configuration keys (`apiKey`, `appId`, `projectId`) are public client identifiers designed to be embedded in frontends; security and access control are enforced by **Firebase App Check** and Google Cloud IAM rules. Never commit private service account JSON keys or backend secrets to the frontend.
+### Step 3: Run the Live Audit & Verify App Check
+1. Select a contract template (e.g. **NDA ($500k Penalty)**) or upload a digital PDF document.
+2. Select your compliance playbook (e.g. **Standard Mutual NDA**).
+3. Click **"Run Autonomous Compliance Audit (AI)"**:
+   * The client intercepts and tokenizes all PII locally.
+   * App Check retrieves an attestation token for `alfredoalvarado53-ui.github.io`.
+   * Firebase AI Logic invokes `gemini-1.5-flash` with the sanitized payload.
+   * Upon successful response, the status updates to **`App Check Verificado · PII Sanitized`**.
+   * The health score, risk verdict, structured findings, and smart redlines populate dynamically.
 
----
-
-### Option 3: Testing On-Device Gemini Nano (Chrome Desktop)
-1. Open Google Chrome Desktop (v138+ or Dev/Canary).
-2. Go to `chrome://flags`:
-   * **Prompt API for Gemini Nano**: Set to `Enabled`.
-   * **Enables optimization guide on device**: Set to `Enabled BypassPerfRequirement`.
-3. Relaunch Chrome and visit `chrome://components`: ensure **Optimization Guide On Device Model** is updated.
-4. Open the app: the header badge will show **`Gemini Nano Ready`**.
-5. Click **"Run Autonomous Compliance Audit (AI)"** — inference executes 100% on-device with zero network bytes.
-
----
-
-### Option 4: Testing the Local Benchmark Demo (Sin IA)
-* If neither Chrome AI flags nor Firebase configuration are present, click **"Probar Demo Local (Reglas Estáticas · Sin IA)"** to evaluate the UI, responsive mobile layout, and PDF extraction without generating simulated AI claims. The report and badge clearly state: *"Aviso de transparencia: Este reporte fue generado mediante el evaluador de referencia estático local sin IA"*.
-
----
-
-## 🔍 How to Distinguish Between Engines in OmniAudit AI
-
-| Engine / Route | Header Badge | Telemetry Engine Label | Telemetry Privacy Label | Data Sent Over Network |
-| :--- | :--- | :--- | :--- | :--- |
-| **Chrome Built-in AI** | `Gemini Nano Ready` (Green) | `Gemini Nano (Local)` | `100% On-Device` | **0 Bytes** (100% on NPU/GPU) |
-| **Firebase AI Logic** | `Firebase AI Logic Ready` (Cyan) | `Gemini 1.5 Flash (Cloud)` | `Client-Side Sanitized` | Sanitized text only (PII stripped) |
-| **Local Benchmark Demo** | `Demo / Requiere Config` (Zinc) | `Demo Local (Sin IA)` | `Demo Local` | **0 Bytes** (Client-side heuristic) |
+### Step 4: Resetting the Session Cleanly
+* Click **⚙️ Configuración / Proyecto Firebase** and click **"Restablecer"**.
+* This completely purges `sessionStorage`, destroys the active Firebase App via `deleteApp()`, resets all telemetry and scores to default, and returns the engine to local-only mode.
 
 ---
 
-## ⚠️ Known Limitations
+## 🔍 How to Distinguish Between Engine Routes
 
-1. **Unstructured PII Nuance:** The local client sanitizer uses comprehensive regex for emails, phone numbers, tax IDs (SSN, RFC, CURP), and credit card patterns. Unconventional or non-standard personal identifiers written in colloquial language (e.g., *"My nickname is Bob and I live next to the red barn"*) require LLM-level semantic comprehension and may not be caught by initial client-side regex tokenization.
-2. **Scanned PDF Documents:** The built-in PDF reader uses Mozilla's PDF.js to extract digital text streams. Scanned PDFs containing only raster images without an embedded OCR text layer will trigger an explicit error alerting the user that OCR is required.
-3. **App Check on Unregistered Custom Domains:** If deployed to a domain not registered under App Check in the Firebase Console, App Check will reject requests with a 403 status. The UI catches and surfaces this exact error clearly.
+OmniAudit AI maintains complete transparency. It never simulates AI responses or presents heuristic fallbacks as model output:
+
+| Engine / Route | Header Badge | Telemetry Engine Label | Telemetry Privacy Label | Verification Status | Network Transmission |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Chrome Built-in AI** | `Gemini Nano · local` (Green) | `Gemini Nano · local` | `100% On-Device (Zero-Cloud)` | Native Browser | **0 Bytes** (100% local NPU/GPU execution) |
+| **Firebase AI Logic** | `Firebase AI Logic · [projectId]` (Cyan) | `Firebase AI Logic · [projectId]` | `App Check Verificado` | Verified on live model response | **Pre-Sanitized Text Only** (Raw PII stripped) |
+| **Demo Local (Sin IA)** | `Demo local · sin IA` (Zinc) | `Demo local · sin IA` | `Demo local · sin IA` | Reference Benchmark | **0 Bytes** (Client-side heuristic rule test) |
+
+---
+
+## 🛠️ Diagnosing Common Firebase & App Check Errors
+
+If an error appears during a cloud audit, OmniAudit AI displays the raw, uncensored error with actionable remedies:
+
+* **`App Check denegó la petición (permission-denied / 403)`:**  
+  *Cause:* The public domain `alfredoalvarado53-ui.github.io` is not registered in the reCAPTCHA v3 admin console, or the Site Key does not match the secret in Firebase Console.  
+  *Fix:* Add `alfredoalvarado53-ui.github.io` to the allowed domains list in Google reCAPTCHA Admin Console and verify the site key.
+* **`Vertex AI API has not been used in project... (403)`:**  
+  *Cause:* The Vertex AI in Firebase API is not enabled, or the project is on the Spark (free) plan rather than the Blaze (pay-as-you-go) plan.  
+  *Fix:* Enable the Blaze plan in Firebase Console and visit **Build > Vertex AI in Firebase** to activate the API.
+* **`JSON de configuración inválido / Faltan campos`:**  
+  *Cause:* The pasted configuration is not valid JSON or lacks `apiKey`, `projectId`, or `appId`.  
+  *Fix:* Ensure double quotes surround all property names and values (standard JSON format).
+
+---
+
+## ⚠️ Security & Privacy Architecture
+
+1. **Client-Side Regex Sanitization:** The sanitizer strips emails, phone numbers, tax IDs (SSN, RFC, CURP), and credit card numbers in browser memory prior to payload assembly.
+2. **Zero Ingestion of Raw PII:** Neither Gemini 1.5 Flash nor Gemini Nano ever receive cleartext personal identifiers.
+3. **DOMPurify HTML Defense:** All rendered Markdown reports, error messages, structured finding cards, and redline amendments are sanitized through DOMPurify to eliminate XSS risks.
+4. **Digital PDF Guard:** Scanned image-only PDFs without digital text layers are detected and halted, instructing the user that OCR pre-processing is required.
 
 ---
 

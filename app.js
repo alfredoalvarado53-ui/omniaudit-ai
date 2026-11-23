@@ -36,17 +36,37 @@ const btnTplNDA = document.getElementById("btnTplNDA");
 const btnTplSaaS = document.getElementById("btnTplSaaS");
 const btnTplEmployment = document.getElementById("btnTplEmployment");
 
+// Modal Elements
+const configModal = document.getElementById("configModal");
+const btnOpenConfigModal = document.getElementById("btnOpenConfigModal");
+const btnCloseConfigModal = document.getElementById("btnCloseConfigModal");
+const customFirebaseConfigInput = document.getElementById("customFirebaseConfigInput");
+const customRecaptchaKeyInput = document.getElementById("customRecaptchaKeyInput");
+const btnSaveConfig = document.getElementById("btnSaveConfig");
+const btnClearConfig = document.getElementById("btnClearConfig");
+const configModalActiveStatus = document.getElementById("configModalActiveStatus");
+const configModalActiveStatusText = document.getElementById("configModalActiveStatusText");
+const configModalError = document.getElementById("configModalError");
+
 // Engine Instance
 const engine = new HybridAuditEngine({ mode: "prefer_on_device" });
 let latestAuditResult = null;
 
-// Initialize Lucide Icons
+// Initialize Lucide Icons safely
 function refreshIcons() {
-  if (window.lucide) {
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
     window.lucide.createIcons();
   }
 }
 refreshIcons();
+
+// Safe DOM Sanitizer Helper
+function safeHtml(raw) {
+  if (window.DOMPurify && typeof window.DOMPurify.sanitize === "function") {
+    return window.DOMPurify.sanitize(raw);
+  }
+  return raw;
+}
 
 // Network Telemetry
 function updateNetworkStatus() {
@@ -54,13 +74,13 @@ function updateNetworkStatus() {
   if (!isOnline) {
     netStatusBadge.className =
       "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-amber-950/70 text-amber-300 border border-amber-600/70 shadow-sm animate-pulse";
-    netStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Offline · Air-Gapped Local</span>`;
+    netStatusBadge.innerHTML = safeHtml(`<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Offline · Air-Gapped Local</span>`);
     telemetryPrivacy.textContent = "100% Local";
     telemetryPrivacy.className = "text-xs font-bold text-amber-400";
   } else {
     netStatusBadge.className =
       "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/60 shadow-sm";
-    netStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Online · Hybrid Ready</span>`;
+    netStatusBadge.innerHTML = safeHtml(`<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Online · Hybrid Ready</span>`);
     telemetryPrivacy.textContent = "Hybrid Protected";
     telemetryPrivacy.className = "text-xs font-bold text-emerald-400";
   }
@@ -73,22 +93,33 @@ updateNetworkStatus();
 async function initCapabilities() {
   await engine._initPromise;
   const caps = await engine.checkCapabilities();
+  
   if (caps.available) {
     engineStatusBadge.className =
       "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/25";
-    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Gemini Nano Ready</span>`;
-    telemetryEngine.textContent = "Gemini Nano (Local)";
+    engineStatusBadge.innerHTML = safeHtml(`<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Gemini Nano · local</span>`);
+    telemetryEngine.textContent = "Gemini Nano · local";
+    telemetryPrivacy.textContent = "100% On-Device (Zero-Cloud)";
   } else if (engine.isFirebaseReady) {
+    const projLabel = engine.activeProjectId ? `Firebase AI Logic · ${engine.activeProjectId}` : "Firebase AI Logic";
     engineStatusBadge.className =
       "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25";
-    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400"></span><span>Firebase AI Logic Ready</span>`;
-    telemetryEngine.textContent = "Gemini 1.5 Flash (Cloud)";
+    engineStatusBadge.innerHTML = safeHtml(`<span class="w-2 h-2 rounded-full bg-cyan-400"></span><span>${projLabel}</span>`);
+    telemetryEngine.textContent = projLabel;
+    
+    if (engine.appCheckStatus === "verified") {
+      telemetryPrivacy.textContent = "App Check Verificado · PII Sanitized";
+    } else {
+      telemetryPrivacy.textContent = "App Check Configurado (Pendiente)";
+    }
   } else {
     engineStatusBadge.className =
       "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-zinc-900 text-zinc-400 border border-white/[0.08]";
-    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-zinc-500"></span><span>Demo / Requiere Config</span>`;
-    telemetryEngine.textContent = "Sin Conexión AI";
+    engineStatusBadge.innerHTML = safeHtml(`<span class="w-2 h-2 rounded-full bg-zinc-500"></span><span>Demo local · sin IA</span>`);
+    telemetryEngine.textContent = "Demo local · sin IA";
+    telemetryPrivacy.textContent = "Sin Conexión AI";
   }
+  refreshIcons();
 }
 initCapabilities();
 
@@ -141,7 +172,7 @@ async function readFile(file) {
       if (!trimmed || trimmed.length === 0) {
         docText.value = "";
         charCount.textContent = "0 characters";
-        alert("El archivo PDF cargado no contiene texto digital legible (parece ser un escaneo o imagen que requiere OCR). Por favor copia el texto o usa un PDF con texto digital seleccionable.");
+        alert("El archivo PDF cargado no contiene texto digital legible (parece ser un escaneo o imagen que requiere OCR). Por favor copia el texto o usa un PDF con texto seleccionable.");
         return;
       }
 
@@ -249,12 +280,12 @@ btnRunAudit.addEventListener("click", async () => {
   btnRunAudit.classList.add("opacity-60", "cursor-not-allowed");
   if (scanLaser) scanLaser.classList.remove("hidden");
 
-  viewReport.innerHTML = `
+  viewReport.innerHTML = safeHtml(`
     <div class="h-64 flex flex-col items-center justify-center text-slate-400">
       <div class="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-3"></div>
       <p class="font-mono text-xs animate-pulse">Running autonomous compliance & PII redlining...</p>
     </div>
-  `;
+  `);
 
   try {
     const result = await engine.auditDocument(text, { playbook: playbookSelect.value });
@@ -262,35 +293,43 @@ btnRunAudit.addEventListener("click", async () => {
 
     // Render Markdown Report with DOMPurify sanitization
     const rawHtml = marked.parse(result.content);
-    viewReport.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+    viewReport.innerHTML = safeHtml(rawHtml);
 
-    // Update Telemetry
+    // Update Telemetry with precise verified engine status
     telemetryEngine.textContent = result.model;
     telemetryLatency.textContent = `${result.latencyMs} ms`;
-    telemetryPrivacy.textContent = result.isPrivateZeroCloud ? "100% On-Device" : "Client-Side Sanitized";
+    
+    if (result.isPrivateZeroCloud) {
+      telemetryPrivacy.textContent = "100% On-Device (Zero-Cloud)";
+    } else if (result.appCheckStatus === "verified") {
+      telemetryPrivacy.textContent = "App Check Verificado · PII Sanitized";
+    } else {
+      telemetryPrivacy.textContent = "Client-Side Sanitized";
+    }
 
     // Render Structured Findings & Risk Matrix derived directly from AI Model Output
     renderStructuredFindings(result.structuredData);
 
   } catch (err) {
     console.error("Audit Execution Error:", err);
-    viewReport.innerHTML = `
+    const sanitizedErrorText = safeHtml(err.message);
+    viewReport.innerHTML = safeHtml(`
       <div class="p-4 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-100 font-sans space-y-3">
         <div class="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
           <i data-lucide="alert-triangle" class="w-4 h-4"></i>
           <span>Error en la Ruta de IA</span>
         </div>
-        <p class="text-xs text-rose-200/90 leading-relaxed">${err.message}</p>
+        <p class="text-xs text-rose-200/90 leading-relaxed">${sanitizedErrorText}</p>
         <div class="pt-2 border-t border-rose-500/20 text-[11px] text-zinc-400 space-y-1">
-          <p><strong>Para resolver esto:</strong></p>
+          <p><strong>Pasos para resolver este error:</strong></p>
           <ul class="list-disc list-inside space-y-0.5 text-zinc-400">
-            <li>Si deseas probar en la nube: configura tus credenciales en <code class="text-cyan-300">firebase-config.js</code> siguiendo el README.</li>
-            <li>Si deseas probar en local: usa Google Chrome v138+ con flags de Gemini Nano activas.</li>
-            <li>O bien, haz clic abajo para ejecutar la referencia local estática de prueba:</li>
+            <li>Haz clic en el engranaje <strong class="text-cyan-300">⚙️ Configuración / Proyecto Firebase</strong> para ingresar tu JSON de Firebase Web y tu Clave de Sitio reCAPTCHA v3.</li>
+            <li>Verifica que el dominio <code class="text-cyan-300">${window.location.hostname}</code> esté autorizado en Google reCAPTCHA y en Firebase App Check.</li>
+            <li>O bien, haz clic abajo en <strong>"Probar Demo Local (Reglas Estáticas · Sin IA)"</strong> para ejecutar la auditoría de referencia local inmediata.</li>
           </ul>
         </div>
       </div>
-    `;
+    `);
   } finally {
     if (scanLaser) scanLaser.classList.add("hidden");
     btnRunAudit.disabled = false;
@@ -318,18 +357,18 @@ if (btnRunDemo) {
 
       // Render Markdown Report with DOMPurify sanitization
       const rawDemoHtml = marked.parse(result.content);
-      viewReport.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawDemoHtml) : rawDemoHtml;
+      viewReport.innerHTML = safeHtml(rawDemoHtml);
 
       // Update Telemetry
       telemetryEngine.textContent = result.model;
       telemetryLatency.textContent = `${result.latencyMs} ms`;
-      telemetryPrivacy.textContent = "Demo Local";
+      telemetryPrivacy.textContent = "Demo local · sin IA";
 
       // Render Structured Findings
       renderStructuredFindings(result.structuredData);
 
     } catch (err) {
-      viewReport.innerHTML = `<div class="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-200">Error en demo: ${err.message}</div>`;
+      viewReport.innerHTML = safeHtml(`<div class="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-200">Error en demo: ${safeHtml(err.message)}</div>`);
     } finally {
       btnRunDemo.disabled = false;
       btnRunAudit.disabled = false;
@@ -343,9 +382,34 @@ if (btnRunDemo) {
 function renderStructuredFindings(data) {
   if (!data) return;
 
-  const score = data.healthScore !== undefined ? data.healthScore : 75;
-  const findings = data.findings || [];
-  const redlines = data.redlines || [];
+  // Strict handling: If structured JSON is missing or invalid, do NOT invent score or findings!
+  if (data.healthScore === null || data.healthScore === undefined || !data.hasStructuredOutput) {
+    scoreNumber.textContent = "--";
+    scoreBar.style.width = "0%";
+    riskVerdictBadge.textContent = safeHtml(data.riskVerdict || "No estructurado");
+    riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700";
+    findingCountBadge.textContent = "0 findings";
+
+    const note = safeHtml(data.parsingNote || "El modelo completó el reporte en Markdown pero omitió el bloque JSON estructurado. No se inventaron puntuaciones artificiales.");
+    findingsContainer.innerHTML = safeHtml(`
+      <div class="h-48 flex flex-col items-center justify-center text-amber-300 text-xs text-center p-4 animate-card-in">
+        <div class="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3">
+          <i data-lucide="info" class="w-5 h-5 text-amber-400"></i>
+        </div>
+        <span class="font-medium text-amber-300">Reporte no estructurado</span>
+        <span class="text-[11px] text-zinc-400 mt-1 max-w-[240px] leading-relaxed">
+          ${note}
+        </span>
+      </div>
+    `);
+    renderSmartRedline([]);
+    refreshIcons();
+    return;
+  }
+
+  const score = data.healthScore;
+  const findings = Array.isArray(data.findings) ? data.findings : [];
+  const redlines = Array.isArray(data.redlines) ? data.redlines : [];
 
   // Animated Score Counter (Framer Odometer Effect)
   animateScoreCounter(score);
@@ -365,10 +429,10 @@ function renderStructuredFindings(data) {
     riskVerdictBadge.textContent = data.riskVerdict || "High Risk (Hostile Terms)";
   }
 
-  // Render Findings Cards with Staggered Slide-Up Entrance
+  // Render Findings Cards safely with DOMPurify
   findingCountBadge.textContent = `${findings.length} findings`;
   if (findings.length === 0) {
-    findingsContainer.innerHTML = `
+    findingsContainer.innerHTML = safeHtml(`
       <div class="h-48 flex flex-col items-center justify-center text-emerald-400 text-xs text-center p-4 animate-card-in">
         <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
           <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
@@ -376,46 +440,57 @@ function renderStructuredFindings(data) {
         <span class="font-medium">Clean contract structure</span>
         <span class="text-[11px] text-zinc-500 mt-1">No high-severity risks flagged under active playbook.</span>
       </div>
-    `;
+    `);
   } else {
-    findingsContainer.innerHTML = findings
-      .map(
-        (f, idx) => `
-        <div class="animate-card-in p-3.5 rounded-xl border ${
-          f.severity === "HIGH"
-            ? "border-rose-500/25 bg-rose-500/[0.04] text-rose-100 hover:border-rose-500/40 hover:bg-rose-500/[0.07]"
-            : "border-amber-500/25 bg-amber-500/[0.04] text-amber-100 hover:border-amber-500/40 hover:bg-amber-500/[0.07]"
-        } transition-all" style="animation-delay: ${idx * 90}ms;">
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="font-bold text-xs flex items-center gap-1.5 text-zinc-100">
-              <i data-lucide="${f.severity === "HIGH" ? "alert-circle" : "alert-triangle"}" class="w-3.5 h-3.5 ${f.severity === "HIGH" ? "text-rose-400" : "text-amber-400"}"></i>
-              ${f.title}
-            </span>
-            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
-              f.severity === "HIGH" ? "bg-rose-500/15 text-rose-300 border border-rose-500/30" : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-            }">${f.severity}</span>
+    const cardsHtml = findings
+      .map((f, idx) => {
+        const safeSeverity = safeHtml(f.severity || "MEDIUM");
+        const safeTitle = safeHtml(f.title || "Finding");
+        const safeDesc = safeHtml(f.desc || "");
+        const safeClause = safeHtml(f.clause || "");
+        const safeFix = safeHtml(f.fix || "");
+        const isHigh = safeSeverity === "HIGH";
+
+        return `
+          <div class="animate-card-in p-3.5 rounded-xl border ${
+            isHigh
+              ? "border-rose-500/25 bg-rose-500/[0.04] text-rose-100 hover:border-rose-500/40 hover:bg-rose-500/[0.07]"
+              : "border-amber-500/25 bg-amber-500/[0.04] text-amber-100 hover:border-amber-500/40 hover:bg-amber-500/[0.07]"
+          } transition-all" style="animation-delay: ${idx * 90}ms;">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-bold text-xs flex items-center gap-1.5 text-zinc-100">
+                <i data-lucide="${isHigh ? "alert-circle" : "alert-triangle"}" class="w-3.5 h-3.5 ${isHigh ? "text-rose-400" : "text-amber-400"}"></i>
+                ${safeTitle}
+              </span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                isHigh ? "bg-rose-500/15 text-rose-300 border border-rose-500/30" : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+              }">${safeSeverity}</span>
+            </div>
+            <p class="text-[11px] text-zinc-300 mb-2 leading-relaxed">${safeDesc}</p>
+            <div class="bg-black/50 p-2 rounded-lg border border-white/[0.06] font-mono text-[10px] text-zinc-400 mb-1.5 shadow-inner">
+              <span class="text-rose-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Original Clause Flag:</span>
+              "${safeClause}"
+            </div>
+            <div class="bg-emerald-500/[0.06] p-2 rounded-lg border border-emerald-500/20 font-mono text-[10px] text-emerald-300">
+              <span class="text-emerald-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Recommended Playbook Fix:</span>
+              ${safeFix}
+            </div>
           </div>
-          <p class="text-[11px] text-zinc-300 mb-2 leading-relaxed">${f.desc}</p>
-          <div class="bg-black/50 p-2 rounded-lg border border-white/[0.06] font-mono text-[10px] text-zinc-400 mb-1.5 shadow-inner">
-            <span class="text-rose-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Original Clause Flag:</span>
-            "${f.clause}"
-          </div>
-          <div class="bg-emerald-500/[0.06] p-2 rounded-lg border border-emerald-500/20 font-mono text-[10px] text-emerald-300">
-            <span class="text-emerald-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Recommended Playbook Fix:</span>
-            ${f.fix}
-          </div>
-        </div>
-      `
-      )
+        `;
+      })
       .join("");
+
+    findingsContainer.innerHTML = safeHtml(cardsHtml);
   }
 
   // Populate Smart Redline View directly from model output
   renderSmartRedline(redlines);
+  refreshIcons();
 }
 
 // Number Counter Easing Animation
 function animateScoreCounter(targetScore) {
+  if (typeof targetScore !== "number" || isNaN(targetScore)) return;
   const duration = 850;
   const start = parseInt(scoreNumber.textContent) || 0;
   const startTime = performance.now();
@@ -434,7 +509,7 @@ function animateScoreCounter(targetScore) {
   requestAnimationFrame(update);
 }
 
-// Generate Redline View (Side-by-side or Strikethrough edits like Ironclad)
+// Generate Redline View safely with DOMPurify
 function renderSmartRedline(redlines) {
   let redlinedHtml = `
     <div class="animate-card-in p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] mb-3 text-xs text-zinc-400 flex items-start gap-2">
@@ -446,23 +521,28 @@ function renderSmartRedline(redlines) {
   `;
 
   (redlines || []).forEach((f, idx) => {
+    const safeTitle = safeHtml(f.title || `Amendment #${idx + 1}`);
+    const safeClause = safeHtml(f.clause || f.original || "");
+    const safeFix = safeHtml(f.fix || f.proposed || "");
+
     redlinedHtml += `
       <div class="animate-card-in p-4 rounded-xl border border-white/[0.08] bg-zinc-950/80 font-mono text-xs space-y-2.5 shadow-sm" style="animation-delay: ${idx * 110}ms;">
         <div class="text-zinc-300 font-bold flex items-center justify-between">
-          <span class="text-zinc-200">Amendment #${idx + 1}: ${f.title}</span>
+          <span class="text-zinc-200">${safeTitle}</span>
           <span class="text-[10px] text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/25">Ready to Apply</span>
         </div>
         <div class="p-2.5 rounded-lg bg-rose-500/[0.08] border border-rose-500/25 text-rose-300 line-through">
-          ${f.clause || f.original}
+          ${safeClause}
         </div>
         <div class="p-2.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 font-medium">
-          + ${f.fix || f.proposed}
+          + ${safeFix}
         </div>
       </div>
     `;
   });
 
-  viewRedline.innerHTML = redlinedHtml;
+  viewRedline.innerHTML = safeHtml(redlinedHtml);
+  refreshIcons();
 }
 
 // Export and Copy Handlers
@@ -489,71 +569,64 @@ btnCopyReport.addEventListener("click", () => {
   alert("Report copied to clipboard!");
 });
 
-
 // --- Mobile View Switching Logic ---
-const mobileTabEditor = document.getElementById('mobileTabEditor');
-const mobileTabScore = document.getElementById('mobileTabScore');
-const mobileTabResults = document.getElementById('mobileTabResults');
+const mobileTabEditor = document.getElementById("mobileTabEditor");
+const mobileTabScore = document.getElementById("mobileTabScore");
+const mobileTabResults = document.getElementById("mobileTabResults");
 
-const colEditor = document.getElementById('colEditor');
-const colScore = document.getElementById('colScore');
-const colResults = document.getElementById('colResults');
+const colEditor = document.getElementById("colEditor");
+const colScore = document.getElementById("colScore");
+const colResults = document.getElementById("colResults");
 
 function setMobileView(activeTab) {
-  if (window.innerWidth >= 1024) return; // Keep standard desktop 3-col grid
+  if (window.innerWidth >= 1024) return;
 
-  // Reset columns
-  colEditor.classList.add('hidden');
-  colScore.classList.add('hidden');
-  colResults.classList.add('hidden');
+  colEditor.classList.add("hidden");
+  colScore.classList.add("hidden");
+  colResults.classList.add("hidden");
 
-  // Reset tab buttons
-  [mobileTabEditor, mobileTabScore, mobileTabResults].forEach(btn => {
+  [mobileTabEditor, mobileTabScore, mobileTabResults].forEach((btn) => {
     if (btn) {
-      btn.className = 'py-2 text-xs font-semibold rounded-xl text-center transition-all text-zinc-400 hover:text-white flex items-center justify-center gap-1.5';
+      btn.className = "py-2 text-xs font-semibold rounded-xl text-center transition-all text-zinc-400 hover:text-white flex items-center justify-center gap-1.5";
     }
   });
 
-  const activeClass = 'py-2 text-xs font-semibold rounded-xl text-center transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center justify-center gap-1.5 shadow-sm';
+  const activeClass = "py-2 text-xs font-semibold rounded-xl text-center transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center justify-center gap-1.5 shadow-sm";
 
-  if (activeTab === 'editor') {
-    colEditor.classList.remove('hidden');
+  if (activeTab === "editor") {
+    colEditor.classList.remove("hidden");
     if (mobileTabEditor) mobileTabEditor.className = activeClass;
-  } else if (activeTab === 'score') {
-    colScore.classList.remove('hidden');
+  } else if (activeTab === "score") {
+    colScore.classList.remove("hidden");
     if (mobileTabScore) mobileTabScore.className = activeClass;
-  } else if (activeTab === 'results') {
-    colResults.classList.remove('hidden');
+  } else if (activeTab === "results") {
+    colResults.classList.remove("hidden");
     if (mobileTabResults) mobileTabResults.className = activeClass;
   }
 }
 
-if (mobileTabEditor) mobileTabEditor.addEventListener('click', () => setMobileView('editor'));
-if (mobileTabScore) mobileTabScore.addEventListener('click', () => setMobileView('score'));
-if (mobileTabResults) mobileTabResults.addEventListener('click', () => setMobileView('results'));
+if (mobileTabEditor) mobileTabEditor.addEventListener("click", () => setMobileView("editor"));
+if (mobileTabScore) mobileTabScore.addEventListener("click", () => setMobileView("score"));
+if (mobileTabResults) mobileTabResults.addEventListener("click", () => setMobileView("results"));
 
-window.addEventListener('resize', () => {
+window.addEventListener("resize", () => {
   if (window.innerWidth >= 1024) {
-    colEditor.classList.remove('hidden');
-    colScore.classList.remove('hidden');
-    colResults.classList.remove('hidden');
+    colEditor.classList.remove("hidden");
+    colScore.classList.remove("hidden");
+    colResults.classList.remove("hidden");
   } else {
-    // default to editor on mobile if none selected
-    setMobileView('editor');
+    setMobileView("editor");
   }
 });
 
-// --- Firebase Session Settings Modal (For Judges & Evaluators) ---
-const configModal = document.getElementById("configModal");
-const btnOpenConfigModal = document.getElementById("btnOpenConfigModal");
-const btnCloseConfigModal = document.getElementById("btnCloseConfigModal");
-const customFirebaseConfigInput = document.getElementById("customFirebaseConfigInput");
-const customRecaptchaKeyInput = document.getElementById("customRecaptchaKeyInput");
-const btnSaveConfig = document.getElementById("btnSaveConfig");
-const btnClearConfig = document.getElementById("btnClearConfig");
-
+// --- Firebase Session Settings Modal (Safe JSON Only, App Check Enforcement) ---
 if (btnOpenConfigModal && configModal) {
   btnOpenConfigModal.addEventListener("click", () => {
+    if (configModalError) {
+      configModalError.classList.add("hidden");
+      configModalError.textContent = "";
+    }
+
     // Load any currently stored session configuration
     try {
       const saved = sessionStorage.getItem("OMNIAUDIT_FIREBASE_CONFIG");
@@ -565,6 +638,14 @@ if (btnOpenConfigModal && configModal) {
         if (parsed.appCheckConfig && parsed.appCheckConfig.recaptchaSiteKey) {
           customRecaptchaKeyInput.value = parsed.appCheckConfig.recaptchaSiteKey;
         }
+
+        if (configModalActiveStatus && configModalActiveStatusText && parsed.firebaseConfig.projectId) {
+          configModalActiveStatus.classList.remove("hidden");
+          const verifiedLabel = engine.appCheckStatus === "verified" ? " (App Check Verificado)" : " (App Check Configurado · Pendiente)";
+          configModalActiveStatusText.textContent = `Proyecto en sesión activo: ${parsed.firebaseConfig.projectId}${verifiedLabel}`;
+        }
+      } else {
+        if (configModalActiveStatus) configModalActiveStatus.classList.add("hidden");
       }
     } catch {
       // ignore
@@ -580,48 +661,146 @@ if (btnOpenConfigModal && configModal) {
   }
 
   if (btnSaveConfig) {
-    btnSaveConfig.addEventListener("click", () => {
+    btnSaveConfig.addEventListener("click", async () => {
+      if (configModalError) {
+        configModalError.classList.add("hidden");
+        configModalError.textContent = "";
+      }
+
       const rawJson = customFirebaseConfigInput.value.trim();
       if (!rawJson) {
-        alert("Por favor introduce un objeto de configuración de Firebase válido.");
+        configModalError.textContent = "Por favor introduce un objeto de configuración de Firebase Web en formato JSON.";
+        configModalError.classList.remove("hidden");
         return;
       }
+
+      let parsed;
       try {
-        let parsed;
-        try {
-          parsed = JSON.parse(rawJson);
-        } catch {
-          // If copied without outer brackets or as JS object
-          parsed = (new Function("return (" + rawJson + ")"))();
-        }
-
-        if (!parsed.apiKey || !parsed.projectId) {
-          alert("El objeto de configuración debe contener al menos 'apiKey' y 'projectId'.");
-          return;
-        }
-
-        const sessionPayload = {
-          firebaseConfig: parsed,
-          appCheckConfig: {
-            recaptchaSiteKey: customRecaptchaKeyInput ? customRecaptchaKeyInput.value.trim() : "",
-            isLocalDebug: false
-          }
-        };
-
-        sessionStorage.setItem("OMNIAUDIT_FIREBASE_CONFIG", JSON.stringify(sessionPayload));
-        alert("Configuración guardada en la sesión. La página se recargará para inicializar el motor con tus credenciales.");
-        window.location.reload();
-      } catch (e) {
-        alert("Error al interpretar la configuración: " + e.message);
+        // STRICT JSON ONLY - NO new Function or dynamic eval
+        parsed = JSON.parse(rawJson);
+      } catch (parseErr) {
+        configModalError.textContent = "Error de sintaxis JSON: El texto ingresado no es un JSON válido. Asegúrate de incluir comillas dobles en las propiedades (ej: {\"apiKey\": \"...\", \"projectId\": \"...\"}). No se permite código ejecutable.";
+        configModalError.classList.remove("hidden");
+        return;
       }
+
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        configModalError.textContent = "El JSON debe representar un objeto con las propiedades públicas de Firebase Web.";
+        configModalError.classList.remove("hidden");
+        return;
+      }
+
+      // Validate required fields
+      if (!parsed.apiKey || !parsed.projectId || !parsed.appId) {
+        configModalError.textContent = "Faltan campos obligatorios en el objeto: 'apiKey', 'projectId' y 'appId' son indispensables.";
+        configModalError.classList.remove("hidden");
+        return;
+      }
+
+      // Prevent placeholders
+      if (
+        parsed.apiKey.startsWith("YOUR_") ||
+        parsed.projectId.startsWith("YOUR_") ||
+        parsed.apiKey.includes("<YOUR_")
+      ) {
+        configModalError.textContent = "Por favor ingresa las credenciales reales de tu proyecto de Firebase, no los textos de ejemplo.";
+        configModalError.classList.remove("hidden");
+        return;
+      }
+
+      // Mandatory App Check on Public Web
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.endsWith(".local");
+
+      const siteKey = customRecaptchaKeyInput ? customRecaptchaKeyInput.value.trim() : "";
+      if (!isLocalhost && (!siteKey || siteKey.length < 10 || siteKey.startsWith("YOUR_"))) {
+        configModalError.textContent = `En la web pública (${window.location.hostname}), la Clave de Sitio (Site Key) de reCAPTCHA v3/Enterprise es obligatoria para inicializar App Check. Regístrala en la consola de Firebase y pégala aquí.`;
+        configModalError.classList.remove("hidden");
+        return;
+      }
+
+      const sessionPayload = {
+        firebaseConfig: parsed,
+        appCheckConfig: {
+          recaptchaSiteKey: siteKey,
+          isLocalDebug: isLocalhost,
+        },
+      };
+
+      try {
+        sessionStorage.setItem("OMNIAUDIT_FIREBASE_CONFIG", JSON.stringify(sessionPayload));
+      } catch (e) {
+        configModalError.textContent = "No se pudo guardar en sessionStorage: " + e.message;
+        configModalError.classList.remove("hidden");
+        return;
+      }
+
+      // Reset previous results on screen cleanly
+      scoreNumber.textContent = "--";
+      scoreBar.style.width = "0%";
+      riskVerdictBadge.textContent = "Awaiting Audit";
+      riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]";
+      findingsContainer.innerHTML = safeHtml(`
+        <div class="h-48 flex flex-col items-center justify-center text-zinc-500 text-xs text-center p-4">
+          <div class="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+            <i data-lucide="check-circle" class="w-5 h-5 text-zinc-600"></i>
+          </div>
+          <span class="font-medium text-zinc-400">Configuración guardada en sesión</span>
+          <span class="text-[11px] text-zinc-600 mt-1 max-w-[220px]">Recargando la app con el nuevo proyecto...</span>
+        </div>
+      `);
+      viewReport.innerHTML = safeHtml(`
+        <div class="h-64 flex flex-col items-center justify-center text-zinc-500 text-center p-4">
+          <p class="font-semibold text-zinc-400">Awaiting Analysis</p>
+          <p class="text-[11px] text-zinc-600 max-w-xs mt-1">Nuevo proyecto activo: ${parsed.projectId}</p>
+        </div>
+      `);
+      viewRedline.innerHTML = "";
+      latestAuditResult = null;
+
+      // Reload cleanly to instantiate fresh engine with new session config
+      window.location.reload();
     });
   }
 
   if (btnClearConfig) {
-    btnClearConfig.addEventListener("click", () => {
+    btnClearConfig.addEventListener("click", async () => {
       sessionStorage.removeItem("OMNIAUDIT_FIREBASE_CONFIG");
-      alert("Configuración de sesión eliminada. La página se recargará.");
-      window.location.reload();
+      customFirebaseConfigInput.value = "";
+      if (customRecaptchaKeyInput) customRecaptchaKeyInput.value = "";
+      if (configModalActiveStatus) configModalActiveStatus.classList.add("hidden");
+      if (configModalError) configModalError.classList.add("hidden");
+
+      // Clean all results from UI
+      scoreNumber.textContent = "--";
+      scoreBar.style.width = "0%";
+      riskVerdictBadge.textContent = "Awaiting Audit";
+      riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]";
+      findingsContainer.innerHTML = safeHtml(`
+        <div class="h-48 flex flex-col items-center justify-center text-zinc-500 text-xs text-center p-4">
+          <div class="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+            <i data-lucide="check-circle" class="w-5 h-5 text-zinc-600"></i>
+          </div>
+          <span class="font-medium text-zinc-400">Sesión restablecida</span>
+          <span class="text-[11px] text-zinc-600 mt-1 max-w-[220px]">Se eliminó la configuración de Firebase de la memoria de sesión.</span>
+        </div>
+      `);
+      viewReport.innerHTML = safeHtml(`
+        <div class="h-64 flex flex-col items-center justify-center text-zinc-500 text-center p-4">
+          <p class="font-semibold text-zinc-400">Awaiting Analysis</p>
+          <p class="text-[11px] text-zinc-600 max-w-xs mt-1">Configuración eliminada. Ejecuta la demo local o configura un nuevo proyecto.</p>
+        </div>
+      `);
+      viewRedline.innerHTML = "";
+      latestAuditResult = null;
+
+      // Cleanly destroy Firebase app instance
+      await engine.resetFirebase();
+      await initCapabilities();
+      refreshIcons();
+      configModal.classList.add("hidden");
     });
   }
 }

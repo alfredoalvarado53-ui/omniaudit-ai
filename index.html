@@ -552,29 +552,58 @@
         </button>
       </div>
 
+      <!-- Active Project Session Status Banner -->
+      <div id="configModalActiveStatus" class="hidden text-xs p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/40 font-mono text-cyan-300 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span id="configModalActiveStatusText">Proyecto en sesión activo</span>
+      </div>
+
+      <!-- Inline Error Container -->
+      <div id="configModalError" class="hidden text-xs text-rose-300 bg-rose-950/60 border border-rose-800/70 p-3 rounded-xl leading-relaxed">
+        <!-- Populated dynamically with validation errors -->
+      </div>
+
       <div class="text-xs text-zinc-300 space-y-2 leading-relaxed">
-        <p>Para probar la ruta real en la nube con <strong>Gemini 1.5 Flash</strong> protegida por <strong>App Check</strong> en este navegador, puedes pegar aquí tu objeto de configuración de Firebase Web.</p>
-        <p class="text-[11px] text-zinc-500">Nota: Los datos se guardan únicamente en la memoria de sesión de este navegador (<code class="text-cyan-400">sessionStorage</code>) y nunca se envían a ningún servidor de terceros.</p>
+        <p>Para probar la ruta cloud con <strong>Gemini 1.5 Flash</strong> protegida por <strong>App Check</strong> en este navegador, puedes pegar aquí tu objeto de configuración de Firebase Web.</p>
+        <p class="text-[11px] text-zinc-400">
+          <strong class="text-zinc-300">Valores públicos:</strong> La configuración Web de Firebase y la Clave de Sitio (Site Key) de reCAPTCHA son valores públicos de cliente. <strong>Nunca ingreses credenciales privadas</strong>, archivos de cuenta de servicio ni secretos de servidor.
+        </p>
+        <p class="text-[11px] text-zinc-500">
+          Los datos se guardan únicamente en la memoria de sesión de esta pestaña (<code class="text-cyan-400 font-mono">sessionStorage</code>) y se eliminan al cerrar la pestaña o pulsar "Restablecer".
+        </p>
       </div>
 
       <div class="space-y-1.5">
-        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">Pegar Objeto / JSON de Firebase Web</label>
+        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">
+          Configuración Firebase Web (JSON estricto)
+        </label>
         <textarea
           id="customFirebaseConfigInput"
           rows="6"
-          placeholder='{\n  "apiKey": "AIzaSy...",\n  "projectId": "tu-proyecto-firebase",\n  "authDomain": "tu-proyecto.firebaseapp.com",\n  "appId": "1:..."\n}'
+          placeholder='{
+  "apiKey": "AIzaSy...",
+  "projectId": "tu-proyecto-firebase",
+  "authDomain": "tu-proyecto.firebaseapp.com",
+  "appId": "1:123456789:web:abcdef"
+}'
           class="w-full rounded-xl bg-zinc-950 p-3 font-mono text-xs text-zinc-200 border border-white/[0.1] focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 custom-scroll leading-relaxed"
         ></textarea>
+        <span class="text-[10px] text-zinc-500 block">Debe ser formato JSON válido (con comillas dobles en nombres de propiedad).</span>
       </div>
 
       <div class="space-y-1.5">
-        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">Clave de Sitio reCAPTCHA v3 / Enterprise (Para App Check)</label>
+        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">
+          Clave de Sitio reCAPTCHA v3 / Enterprise (Para App Check)
+        </label>
         <input
           type="text"
           id="customRecaptchaKeyInput"
-          placeholder="Clave pública de reCAPTCHA para este dominio"
+          placeholder="6Lxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           class="w-full rounded-xl bg-zinc-950 p-2.5 font-mono text-xs text-zinc-200 border border-white/[0.1] focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
         />
+        <span class="text-[10px] text-zinc-500 block">
+          Obligatorio en la web pública (<code class="text-zinc-400">alfredoalvarado53-ui.github.io</code>). Registra este dominio en la consola de reCAPTCHA y en Firebase App Check.
+        </span>
       </div>
 
       <div class="flex items-center justify-between pt-2 border-t border-white/[0.08]">
