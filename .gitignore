@@ -1,0 +1,17 @@
+# Local Firebase Configuration (Contains developer project IDs)
+firebase-config.js
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node / Dependencies
+node_modules/
+package-lock.json
