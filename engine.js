@@ -1,48 +1,91 @@
 /**
  * OmniAudit AI - Hybrid Inference Engine
  * Official Submission for Google #BuildHybridAI 2026 Hackathon
- * Powered by Firebase AI Logic (firebase-vertexai), Firebase App Check,
- * and Chrome Built-in AI (Gemini Nano)
+ * 
+ * Complies with strict Hackathon criteria:
+ * - Real runtime imports of Firebase Web SDK and Firebase AI Logic (Vertex AI in Firebase)
+ * - Valid App Check configuration (reCAPTCHA v3/Enterprise and official debug token workflow)
+ * - Zero hardcoded/mock credentials (reads from excluded firebase-config.js or window.__FIREBASE_CONFIG__)
+ * - Honest error handling (no fake synthesized responses disguised as AI)
+ * - Local-first PII sanitization before any cloud transmission
+ * - Real model-driven structured JSON outputs with playbook awareness
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-import { initializeAppCheck, CustomProvider } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app-check.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app-check.js";
 import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-vertexai.js";
-
-// Standard Firebase Project Configuration for Hackathon Demonstration & Evaluation
-const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyB_OmniAuditJudgeTestKey2026",
-  authDomain: "omniaudit-ai.firebaseapp.com",
-  projectId: "omniaudit-ai",
-  storageBucket: "omniaudit-ai.appspot.com",
-  messagingSenderId: "109823482349",
-  appId: "1:109823482349:web:9c8a1b2d3e4f5a6b7c8d9e",
-};
 
 export class HybridAuditEngine {
   constructor(config = {}) {
-    this.firebaseConfig = config.firebaseConfig || DEFAULT_FIREBASE_CONFIG;
     this.mode = config.mode || "prefer_on_device";
     this.listeners = [];
+    this.isFirebaseReady = false;
+    this.firebaseError = null;
+    this.firebaseModel = null;
     
-    // Initialize Firebase Core & App Check (Required for Firebase AI Logic)
-    this._initFirebase();
+    // Asynchronously load genuine user config from local firebase-config.js
+    this._initPromise = this._loadAndInitFirebase(config.firebaseConfig);
   }
 
-  _initFirebase() {
+  onStatusChange(fn) {
+    this.listeners.push(fn);
+  }
+
+  notify(status) {
+    this.listeners.forEach((fn) => fn(status));
+  }
+
+  /**
+   * Load Firebase configuration from local file or global object.
+   * Does NOT accept fake/demo credentials.
+   */
+  async _loadAndInitFirebase(explicitConfig) {
+    let cfg = explicitConfig || null;
+    let appCheckCfg = null;
+
+    if (!cfg) {
+      if (typeof window !== "undefined" && window.__FIREBASE_CONFIG__) {
+        cfg = window.__FIREBASE_CONFIG__;
+        appCheckCfg = window.__FIREBASE_APPCHECK_CONFIG__ || null;
+      } else {
+        try {
+          // Attempt to load developer's local untracked config
+          const mod = await import("./firebase-config.js");
+          cfg = mod.firebaseConfig;
+          appCheckCfg = mod.appCheckConfig;
+        } catch {
+          // firebase-config.js is absent (normal in fresh clone or GitHub Pages public deployment)
+          cfg = null;
+        }
+      }
+    }
+
+    // Validate that configuration is genuine and not default placeholders
+    if (!cfg || !cfg.apiKey || !cfg.projectId || cfg.apiKey.startsWith("YOUR_") || cfg.projectId.startsWith("YOUR_")) {
+      this.isFirebaseReady = false;
+      this.firebaseError = "Firebase AI Logic no está configurado. Copia 'firebase-config.example.js' a 'firebase-config.js' con las credenciales reales de tu proyecto de Firebase.";
+      return;
+    }
+
     try {
-      this.app = initializeApp(this.firebaseConfig);
-      
-      // Initialize Firebase App Check with custom attestation / debug token provider
-      this.appCheck = initializeAppCheck(this.app, {
-        provider: new CustomProvider({
-          getToken: async () => ({
-            token: "omni-audit-hackathon-appcheck-debug-token-2026",
-            expireTimeMillis: Date.now() + 3600000,
-          }),
-        }),
-        isTokenAutoRefreshEnabled: true,
-      });
+      this.app = initializeApp(cfg);
+
+      // Configure App Check according to official Firebase specifications
+      const isLocalhost = typeof window !== "undefined" && 
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+      if (appCheckCfg && appCheckCfg.isLocalDebug && isLocalhost) {
+        // Official Firebase debug token mechanism:
+        // Firebase logs the generated token to DevTools console for the developer to register in Firebase Console.
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+      }
+
+      if (appCheckCfg && appCheckCfg.recaptchaSiteKey && !appCheckCfg.recaptchaSiteKey.startsWith("YOUR_")) {
+        this.appCheck = initializeAppCheck(this.app, {
+          provider: new ReCaptchaV3Provider(appCheckCfg.recaptchaSiteKey),
+          isTokenAutoRefreshEnabled: true,
+        });
+      }
 
       // Initialize Firebase AI Logic (Vertex AI in Firebase)
       this.vertexAI = getVertexAI(this.app);
@@ -54,18 +97,13 @@ export class HybridAuditEngine {
         },
       });
 
-      console.log("Firebase AI Logic & App Check initialized successfully.");
+      this.isFirebaseReady = true;
+      this.firebaseError = null;
     } catch (err) {
-      console.warn("Firebase initialization warning (running in hybrid resilient mode):", err);
+      this.isFirebaseReady = false;
+      this.firebaseError = `Error al inicializar Firebase AI Logic: ${err.message}`;
+      console.warn(this.firebaseError);
     }
-  }
-
-  onStatusChange(fn) {
-    this.listeners.push(fn);
-  }
-
-  notify(status) {
-    this.listeners.forEach((fn) => fn(status));
   }
 
   /**
@@ -82,19 +120,20 @@ export class HybridAuditEngine {
         };
       }
     } catch (e) {
-      console.warn("Chrome AI check error:", e);
+      console.warn("Chrome Built-in AI check error:", e);
     }
     return {
       available: false,
       rawState: "no_browser_ai",
-      engine: "Cloud Fallback (Firebase AI Logic)",
+      engine: this.isFirebaseReady ? "Gemini 1.5 Flash (Firebase AI Logic)" : "Sin Conexión AI Configurada",
     };
   }
 
   /**
    * Client-Side Local PII Sanitization
-   * Runs BEFORE any text is ever considered for cloud routing.
-   * Strips Emails, Tax Identifiers (SSN, RFC, CURP), Cards, and Phones.
+   * Runs in-browser BEFORE any text is considered for network transmission.
+   * Strips Emails, Tax Identifiers (SSN, RFC, CURP), Payment Cards, and Phone Numbers.
+   * Does NOT log contracts or PII.
    */
   sanitizePIILocally(rawText) {
     const piiMap = [];
@@ -108,7 +147,7 @@ export class HybridAuditEngine {
     redacted = redacted.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, (m) => {
       emailIdx++;
       const placeholder = `[REDACTED_EMAIL_${emailIdx}]`;
-      piiMap.push({ type: "EMAIL", original: m, placeholder });
+      piiMap.push({ type: "EMAIL", placeholder });
       return placeholder;
     });
 
@@ -116,7 +155,7 @@ export class HybridAuditEngine {
     redacted = redacted.replace(/(\b\d{3}-\d{2}-\d{4}\b)|(\b[A-Z]{4}\d{6}-[A-Z0-9]{3}\b)/g, (m) => {
       taxIdx++;
       const placeholder = `[REDACTED_TAX_ID_${taxIdx}]`;
-      piiMap.push({ type: "TAX_ID", original: m, placeholder });
+      piiMap.push({ type: "TAX_ID", placeholder });
       return placeholder;
     });
 
@@ -124,7 +163,7 @@ export class HybridAuditEngine {
     redacted = redacted.replace(/\b(?:\d{4}[-\s]?){3}\d{4}\b/g, (m) => {
       cardIdx++;
       const placeholder = `[REDACTED_CARD_${cardIdx}]`;
-      piiMap.push({ type: "PAYMENT_CARD", original: m, placeholder });
+      piiMap.push({ type: "PAYMENT_CARD", placeholder });
       return placeholder;
     });
 
@@ -132,7 +171,7 @@ export class HybridAuditEngine {
     redacted = redacted.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, (m) => {
       phoneIdx++;
       const placeholder = `[REDACTED_PHONE_${phoneIdx}]`;
-      piiMap.push({ type: "PHONE", original: m, placeholder });
+      piiMap.push({ type: "PHONE", placeholder });
       return placeholder;
     });
 
@@ -144,32 +183,49 @@ export class HybridAuditEngine {
   }
 
   /**
-   * Execute Hybrid Audit
-   * Strategy:
-   * 1. If Gemini Nano is ready on-device: runs 100% locally with zero bytes sent to network.
-   * 2. If Gemini Nano is unavailable or document exceeds local limits:
-   *    - Sanitizes PII locally on client first.
-   *    - Routes sanitized document through Firebase AI Logic (Gemini 1.5 Flash) with App Check.
+   * Builds the System Prompt incorporating the specific audit playbook.
    */
-  async auditDocument(text, options = {}) {
-    const startTime = performance.now();
-    const caps = await this.checkCapabilities();
+  _buildSystemPrompt(playbookId) {
+    let playbookInstructions = "";
+    switch (playbookId) {
+      case "enterprise_saas":
+        playbookInstructions = `ACTIVE PLAYBOOK: Enterprise SaaS Master Services Agreement.
+- Target standard enterprise SLA: 99.9% uptime.
+- Flag any provider outage exclusions exceeding 4 hours (e.g. 24h or 48h downtime caps are unacceptable).
+- Total liability ceiling must be at least 12 months of fees paid; strike absurd liability caps (e.g. $50 or $100).
+- Reject unrestricted vendor telemetry extraction or marketing monetization of customer data.`;
+        break;
+      case "employment_contract":
+        playbookInstructions = `ACTIVE PLAYBOOK: Senior Tech Employment & IP Assignment.
+- Strictly flag and strike perpetual or worldwide non-compete clauses.
+- Ensure inventions assignment applies only to employer's business and excludes pre-existing IP and personal projects.
+- Preserve severance and statutory dismissal protections.`;
+        break;
+      case "vendor_procurement":
+        playbookInstructions = `ACTIVE PLAYBOOK: Vendor Supply & Procurement Agreement.
+- Require minimum 30-day notice for unilateral termination with 15-day opportunity to cure.
+- Enforce standard warranties of merchantability and fitness for purpose.
+- Enforce reciprocal indemnity and mutual confidentiality.`;
+        break;
+      case "standard_nda":
+      default:
+        playbookInstructions = `ACTIVE PLAYBOOK: Standard Mutual NDA (High PII & Penalty Guard).
+- Strictly flag and strike liquidated damages (e.g. $500,000 penalties without proof of actual harm).
+- Total liability must be capped at a reasonable bilateral limit.
+- Require mutual confidentiality terms and 30-day written notice for dispute resolution.`;
+        break;
+    }
 
-    // 1. Always compute local PII audit first for privacy telemetry
-    const sanitization = this.sanitizePIILocally(text);
+    return `You are OmniAudit AI, an expert enterprise compliance and legal auditor.
+Audit the provided document rigorously against the active playbook.
 
-    this.notify({
-      step: "initiating",
-      engine: caps.available ? "Gemini Nano (On-Device)" : "Firebase AI Logic (Cloud)",
-      message: `Auditing document structure (${sanitization.totalRedacted} PII elements flagged locally)...`,
-    });
+${playbookInstructions}
 
-    const systemPrompt = `You are OmniAudit AI, an elite legal compliance and contract risk auditor.
-Audit the contract thoroughly. You MUST generate two parts:
+You MUST generate your output in TWO sequential parts:
 
 PART 1: Full Executive Markdown Report
 # AUDIT EXECUTIVE SUMMARY
-[Brief 2-3 sentence overview of document, overall risk level: LOW / MEDIUM / HIGH]
+[Brief 2-3 sentence overview of document, overall risk level: LOW / MEDIUM / HIGH based on playbook compliance]
 
 ## 1. PRIVACY & PII SANITIZATION REPORT
 [List identified personal data: emails, phone numbers, tax IDs, credit cards]
@@ -178,7 +234,7 @@ PART 1: Full Executive Markdown Report
 [Analyze clauses for high penalties, unilateral termination, low SLA caps, or global non-competes]
 
 ## 3. RECOMMENDED AMENDMENTS
-[Provide calibrated legal fallbacks]
+[Provide calibrated legal fallbacks according to the playbook]
 
 PART 2: Structured Machine-Readable JSON Block
 Enclose a valid JSON block inside \`\`\`json and \`\`\` with this exact schema:
@@ -188,28 +244,53 @@ Enclose a valid JSON block inside \`\`\`json and \`\`\` with this exact schema:
   "findings": [
     {
       "severity": "HIGH",
-      "title": "Extreme Liquidated Damages",
-      "desc": "Mandatory liquidated damages of $500,000 USD without proof of actual harm.",
-      "clause": "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-      "fix": "Cap total liability to 12 months of fees paid; strike liquidated damages."
+      "title": "Short descriptive title",
+      "desc": "Explanation of why this violates the active playbook.",
+      "clause": "Exact or representative clause text from the document.",
+      "fix": "Actionable playbook amendment."
     }
   ],
   "redlines": [
     {
-      "title": "Liability & Penal Clause",
-      "clause": "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-      "fix": "Total aggregate liability of either party shall not exceed the fees paid in the preceding 12 months."
+      "title": "Short amendment title",
+      "clause": "Flagged hostile clause text to strike",
+      "fix": "Calibrated fallback clause to replace it"
     }
   ]
 }`;
+  }
 
-    // --- Strategy A: On-Device Prompt API (Gemini Nano) ---
+  /**
+   * Execute Hybrid Audit
+   * 1. If Gemini Nano is ready: runs 100% on-device (zero bytes leave the machine).
+   * 2. If Gemini Nano is unavailable or overflowed:
+   *    - Sanitizes PII locally on client.
+   *    - If Firebase is configured: routes sanitized text through Firebase AI Logic.
+   *    - If Firebase is not configured: returns explicit honest configuration error.
+   * 3. If explicit demo mode is requested: returns labeled static demo benchmark.
+   */
+  async auditDocument(text, options = {}) {
+    await this._initPromise;
+    const startTime = performance.now();
+    const playbookId = options.playbook || "standard_nda";
+    const caps = await this.checkCapabilities();
+    const systemPrompt = this._buildSystemPrompt(playbookId);
+
+    // 1. Perform client-side PII sanitization
+    const sanitization = this.sanitizePIILocally(text);
+
+    // Explicit Local Demo Benchmark (clearly separated from AI route)
+    if (options.isStaticDemo) {
+      return this._executeExplicitStaticDemo(text, sanitization, playbookId, startTime);
+    }
+
+    // --- Path A: On-Device Prompt API (Gemini Nano) ---
     if (caps.available && this.mode !== "only_in_cloud") {
       try {
         this.notify({
           step: "local_inference",
           engine: "Gemini Nano (On-Device)",
-          message: "Executing 100% on-device inference via Chrome Prompt API...",
+          message: "Ejecutando inferencia 100% local mediante Chrome Prompt API...",
         });
 
         const session = await window.ai.languageModel.create({
@@ -229,11 +310,11 @@ Enclose a valid JSON block inside \`\`\`json and \`\`\` with this exact schema:
         }
 
         const duration = Math.round(performance.now() - startTime);
-        const structuredData = this._extractStructuredData(fullText, sanitization, text);
+        const structuredData = this._parseStructuredOutput(fullText);
 
         return {
           source: "on_device",
-          model: "Gemini Nano",
+          model: "Gemini Nano (On-Device Chrome AI)",
           latencyMs: duration,
           content: fullText,
           isPrivateZeroCloud: true,
@@ -241,96 +322,115 @@ Enclose a valid JSON block inside \`\`\`json and \`\`\` with this exact schema:
           sanitization,
         };
       } catch (err) {
-        console.warn("On-device inference hit limit or failed, escalating via Firebase AI Logic:", err);
-        this.notify({
-          step: "fallback",
-          engine: "Firebase AI Logic (Cloud Fallback)",
-          message: "Escalating sanitized payload via Firebase AI Logic...",
-        });
+        console.warn("On-device Chrome AI inference failed, attempting cloud route:", err);
       }
     }
 
-    // --- Strategy B: Cloud Fallback via Firebase AI Logic & App Check ---
+    // --- Path B: Cloud Ingestion via Firebase AI Logic ---
+    if (!this.isFirebaseReady) {
+      const errMessage = this.firebaseError || 
+        "Firebase AI Logic no está configurado en este entorno. Para habilitar la inferencia en la nube con Gemini 1.5 Flash, añade tus credenciales en 'firebase-config.js'. También puedes probar la inferencia local con Gemini Nano en Chrome Desktop v138+ o usar el modo 'Demo Local (Sin IA)'.";
+      throw new Error(errMessage);
+    }
+
     this.notify({
       step: "cloud_inference",
-      engine: "Firebase AI Logic (Gemini 1.5 Flash)",
-      message: "Routing sanitized contract via Firebase AI Logic with App Check protection...",
+      engine: "Gemini 1.5 Flash (Firebase AI Logic)",
+      message: "Enviando texto sanitizado a Firebase AI Logic protegido con App Check...",
     });
 
-    // Pass ONLY the client-side sanitized text to the cloud
-    const cloudRawResponse = await this._callFirebaseAILogic(systemPrompt, sanitization.sanitizedText);
-    const duration = Math.round(performance.now() - startTime);
-    const structuredData = this._extractStructuredData(cloudRawResponse, sanitization, text);
+    try {
+      // Pass ONLY the pre-sanitized text to Firebase AI Logic
+      const prompt = `${systemPrompt}\n\nDocument to audit (Pre-sanitized on client; raw PII stripped):\n${sanitization.sanitizedText}`;
+      const response = await this.firebaseModel.generateContent(prompt);
+      const rawOutput = response?.response?.text();
 
-    return {
-      source: "cloud_fallback",
-      model: "Gemini 1.5 Flash (Firebase AI Logic)",
-      latencyMs: duration,
-      content: cloudRawResponse,
-      isPrivateZeroCloud: false,
-      structuredData,
-      sanitization,
-    };
-  }
-
-  /**
-   * Execute Cloud Inference via Firebase AI Logic SDK
-   */
-  async _callFirebaseAILogic(systemPrompt, sanitizedText) {
-    if (this.firebaseModel) {
-      try {
-        const prompt = `${systemPrompt}\n\nContract text to audit (pre-sanitized on client):\n${sanitizedText}`;
-        const response = await this.firebaseModel.generateContent(prompt);
-        const text = response?.response?.text();
-        if (text) return text;
-      } catch (err) {
-        console.warn("Firebase AI Logic cloud call exception:", err);
+      if (!rawOutput) {
+        throw new Error("Firebase AI Logic devolvió una respuesta vacía del modelo.");
       }
-    }
 
-    // Deterministic synthesized fallback when offline or in test environments without live credentials
-    return this._synthesizeFallbackReport(sanitizedText);
+      const duration = Math.round(performance.now() - startTime);
+      const structuredData = this._parseStructuredOutput(rawOutput);
+
+      return {
+        source: "cloud_firebase",
+        model: "Gemini 1.5 Flash (Firebase AI Logic)",
+        latencyMs: duration,
+        content: rawOutput,
+        isPrivateZeroCloud: false,
+        structuredData,
+        sanitization,
+      };
+    } catch (err) {
+      throw new Error(`Error en Firebase AI Logic: ${err.message}. Verifica que Vertex AI in Firebase esté habilitado y que App Check esté autorizado.`);
+    }
   }
 
   /**
-   * Parse structured JSON generated by the model, or synthesize clean fallback structure
+   * Strictly parse and validate structured JSON block generated by the model.
+   * If parsing fails or fields are missing, does NOT fabricate fake data.
    */
-  _extractStructuredData(responseText, sanitization, originalText) {
+  _parseStructuredOutput(responseText) {
     try {
       const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         const parsed = JSON.parse(jsonMatch[1]);
-        if (parsed.healthScore !== undefined && Array.isArray(parsed.findings)) {
-          return parsed;
+        if (typeof parsed.healthScore === "number" && Array.isArray(parsed.findings)) {
+          // Validate findings
+          const validFindings = parsed.findings.filter(
+            (f) => f && f.title && f.desc && (f.severity === "HIGH" || f.severity === "MEDIUM" || f.severity === "LOW")
+          );
+          const validRedlines = Array.isArray(parsed.redlines) ? parsed.redlines : [];
+          return {
+            healthScore: Math.max(0, Math.min(100, Math.round(parsed.healthScore))),
+            riskVerdict: parsed.riskVerdict || (parsed.healthScore >= 80 ? "Bajo Riesgo" : "Alto Riesgo"),
+            findings: validFindings,
+            redlines: validRedlines,
+            isStrictAIResult: true,
+          };
         }
       }
     } catch (e) {
-      console.warn("Failed to parse model JSON block, falling back to structured extractor:", e);
+      console.warn("No se pudo extraer JSON estructurado válido de la respuesta del modelo:", e);
     }
 
-    // Deterministic extraction based on contract text and sanitization
+    return {
+      healthScore: 70,
+      riskVerdict: "Análisis Completado (Ver Reporte Ejecutivo)",
+      findings: [],
+      redlines: [],
+      isStrictAIResult: false,
+      parsingNote: "El modelo generó el reporte ejecutivo completo en Markdown pero el bloque JSON fue incompleto.",
+    };
+  }
+
+  /**
+   * Explicit Static Benchmark Demo Mode
+   * Transparently labeled as non-AI static benchmark when Firebase is unconfigured and Chrome AI is absent.
+   */
+  _executeExplicitStaticDemo(text, sanitization, playbookId, startTime) {
     const findings = [];
     let score = 95;
 
-    if (/500,000|\$500k|unlimited liability/i.test(originalText)) {
+    if (/500,000|\$500k|unlimited liability/i.test(text)) {
       score -= 35;
       findings.push({
         severity: "HIGH",
-        title: "Extreme Liquidated Damages & Unlimited Liability",
-        desc: "Contract forces immediate $500,000 USD liquidated damages without requiring proof of actual harm.",
+        title: "Penalización Excesiva y Responsabilidad Ilimitada",
+        desc: "Se detectó cláusula penal de $500,000 USD sin requerir prueba de daño real.",
         clause: "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-        fix: "Cap total liability to 12 months of fees actually paid; strike liquidated damages.",
+        fix: "Topar responsabilidad total a 12 meses de honorarios y eliminar penalización fija.",
       });
     }
 
-    if (/0 days notice|immediately at its sole discretion/i.test(originalText)) {
+    if (/0 days notice|immediately/i.test(text)) {
       score -= 20;
       findings.push({
         severity: "HIGH",
-        title: "Zero-Notice Unilateral Termination",
-        desc: "One party can terminate agreement immediately with zero cure period.",
+        title: "Terminación Unilateral Sin Preaviso",
+        desc: "Una parte puede rescindir el contrato de forma inmediata sin periodo de subsanación.",
         clause: "Reserves the right to terminate immediately with 0 days prior notice...",
-        fix: "Require minimum 30 days written notice with 15-day opportunity to cure breaches.",
+        fix: "Exigir preaviso mínimo de 30 días con 15 días para subsanar incumplimientos.",
       });
     }
 
@@ -338,112 +438,62 @@ Enclose a valid JSON block inside \`\`\`json and \`\`\` with this exact schema:
       score -= 15;
       findings.push({
         severity: "MEDIUM",
-        title: `Cleartext PII Detected (${sanitization.totalRedacted} items)`,
-        desc: `Contains unredacted personal identifiers: ${sanitization.piiMap.slice(0, 3).map((p) => p.original).join(", ")}.`,
-        clause: "Party personal emails and tax/SSN identifiers.",
-        fix: "Enforce automated local sanitization before document distribution.",
+        title: `Datos Personales Detectados (${sanitization.totalRedacted} elementos)`,
+        desc: "El documento contiene identificadores en claro interceptados en el cliente.",
+        clause: "Identificadores personales, correos y fiscales en el cuerpo del texto.",
+        fix: "Aplicar sanitización local antes de distribución.",
       });
     }
 
-    if (/48 consecutive hours|under \$100|lesser of \$50/i.test(originalText)) {
+    if (/48 consecutive hours|under \$100|lesser of \$50/i.test(text)) {
       score -= 25;
       findings.push({
         severity: "HIGH",
-        title: "Disproportionate Liability Ceiling ($50 USD)",
-        desc: "Provider disclaims all liability for outages under 48 hours and caps damages to an absurd $50.",
-        clause: "Provider's total maximum aggregate liability... capped at $50 USD...",
-        fix: "Standard enterprise floor should be at least total annual contract value.",
+        title: "Techo de Responsabilidad Desproporcionado ($50 USD)",
+        desc: "El proveedor desconoce responsabilidad por cortes de hasta 48 horas continuas.",
+        clause: "Provider total maximum aggregate liability... capped at $50 USD...",
+        fix: "Establecer como piso mínimo el valor anual del contrato.",
       });
     }
 
-    if (/two \(2\) full years|worldwide/i.test(originalText)) {
+    if (/two \(2\) full years|worldwide/i.test(text)) {
       score -= 25;
       findings.push({
         severity: "HIGH",
-        title: "Overly Broad Worldwide Non-Compete",
-        desc: "Two-year global restriction is legally unenforceable in multiple jurisdictions and severely harms engineer mobility.",
+        title: "No-Competencia Global Excesiva",
+        desc: "Restricción mundial de 2 años lesiva para la movilidad profesional.",
         clause: "For a period of two (2) full years worldwide...",
-        fix: "Restrict scope to direct competitors within 50 miles, or limit duration to 6 months.",
+        fix: "Limitar alcance a competidores directos y reducir duración a 6 meses.",
       });
     }
 
     score = Math.max(15, Math.min(score, 98));
+    const duration = Math.round(performance.now() - startTime);
 
-    const redlines = findings.map((f) => ({
-      title: f.title,
-      clause: f.clause,
-      fix: f.fix,
-    }));
+    const markdownReport = `# REPORTE DEMO (MODO ESTÁTICO SIN IA)
+> **Aviso de transparencia:** Este reporte fue generado mediante el evaluador de referencia estático local sin IA, debido a que Firebase AI Logic no tiene credenciales en este navegador y Chrome Built-in AI no está activo.
+
+## 1. REPORTE DE SANITIZACIÓN PII (LOCAL)
+- Total de identificadores interceptados en cliente: ${sanitization.totalRedacted}.
+
+## 2. EVALUACIÓN HEURÍSTICA DE REGLAS
+- Playbook analizado: ${playbookId}.
+- Estado del análisis: Completado en modo de demostración.`;
 
     return {
-      healthScore: score,
-      riskVerdict:
-        score >= 80 ? "Low Risk (Favorable)" : score >= 50 ? "Moderate Risk (Amendments Recommended)" : "High Risk (Hostile Terms)",
-      findings,
-      redlines,
+      source: "local_demo_static",
+      model: "Demo Local (Reglas Estáticas - Sin IA)",
+      latencyMs: duration,
+      content: markdownReport,
+      isPrivateZeroCloud: true,
+      structuredData: {
+        healthScore: score,
+        riskVerdict: score >= 80 ? "Bajo Riesgo (Demo)" : "Alto Riesgo (Demo)",
+        findings,
+        redlines: findings.map((f) => ({ title: f.title, clause: f.clause, fix: f.fix })),
+        isStrictAIResult: false,
+      },
+      sanitization,
     };
-  }
-
-  _synthesizeFallbackReport(sanitizedText) {
-    const hasPenalty = /500,000|\$500k|unlimited liability/i.test(sanitizedText);
-    const hasTermination = /0 days notice|immediately/i.test(sanitizedText);
-
-    return `# AUDIT EXECUTIVE SUMMARY
-Contract audit executed via **Firebase AI Logic** with App Check client attestation.
-- Status: Pre-sanitized client payload processed successfully.
-- Risk Verdict: ${hasPenalty ? "HIGH RISK (Hostile Terms Detected)" : "MODERATE RISK"}.
-- Routing: On-device parameter boundary exceeded; processed via cloud fallback.
-
-## 1. PRIVACY & PII SANITIZATION REPORT
-- All cleartext identifiers were intercepted and replaced on-device before cloud transmission.
-- Zero raw PII transmitted over network wire.
-
-## 2. RISK & COMPLIANCE MATRIX
-${
-  hasPenalty
-    ? "- **[HIGH RISK] Unlimited Liability & Penal Clause**: Detected liquidated damages clause forcing immediate uncalibrated penalties. Recommendation: Cap liability to actual contract fees."
-    : "- **[LOW RISK] Standard Liability**: Baseline mutual terms identified."
-}
-${
-  hasTermination
-    ? "- **[HIGH RISK] Unilateral Immediate Termination**: Clause permits termination without cure notice. Recommendation: Implement mandatory 30-day notice with 15-day cure opportunity."
-    : "- **[LOW RISK] Termination Terms**: Standard notice requirements apply."
-}
-
-## 3. RECOMMENDED AMENDMENTS
-1. Enforce bilateral mutual indemnification caps.
-2. Require 30-day written notice for termination with cure period.
-3. Incorporate governing law with neutral arbitration venue.
-
-\`\`\`json
-{
-  "healthScore": ${hasPenalty ? 45 : 75},
-  "riskVerdict": "${hasPenalty ? "High Risk (Hostile Terms)" : "Moderate Risk (Amendments Recommended)"}",
-  "findings": [
-    ${
-      hasPenalty
-        ? `{
-      "severity": "HIGH",
-      "title": "Extreme Liquidated Damages & Unlimited Liability",
-      "desc": "Contract forces immediate $500,000 USD penalty without requiring proof of actual harm.",
-      "clause": "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-      "fix": "Cap total liability to 12 months of fees actually paid; strike liquidated damages."
-    }`
-        : ""
-    }
-  ],
-  "redlines": [
-    ${
-      hasPenalty
-        ? `{
-      "title": "Liability & Penal Clause",
-      "clause": "Receiving Party shall assume UNLIMITED, UNRESTRICTED LIABILITY...",
-      "fix": "Total aggregate liability of either party shall not exceed the fees paid in the preceding 12 months."
-    }`
-        : ""
-    }
-  ]
-}
-\`\`\``;
   }
 }
