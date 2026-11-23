@@ -51,6 +51,75 @@
       -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 60%, transparent 100%);
     }
 
+    /* Ambient Floating Aurora Animations */
+    @keyframes floatSlow1 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(35px, -25px) scale(1.1); }
+    }
+    @keyframes floatSlow2 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(-30px, 30px) scale(1.08); }
+    }
+    .animate-aurora-1 {
+      animation: floatSlow1 14s ease-in-out infinite;
+    }
+    .animate-aurora-2 {
+      animation: floatSlow2 18s ease-in-out infinite;
+    }
+
+    /* Laser Scanner Beam over Document */
+    @keyframes laserSweep {
+      0% { top: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .animate-laser {
+      animation: laserSweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    }
+
+    /* Button Shimmer Sheen */
+    @keyframes shimmerSweep {
+      0% { transform: translateX(-150%) rotate(25deg); }
+      100% { transform: translateX(250%) rotate(25deg); }
+    }
+    .btn-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-shimmer::after {
+      content: '';
+      position: absolute;
+      top: -100%;
+      left: -50%;
+      width: 60%;
+      height: 300%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.35),
+        transparent
+      );
+      transform: rotate(25deg);
+      animation: shimmerSweep 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      pointer-events: none;
+    }
+
+    /* Staggered Card Entrance */
+    @keyframes slideUpFade {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .animate-card-in {
+      animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
     /* Ultra-sleek Framer Glass Card */
     .framer-card {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 100%), rgba(10, 14, 26, 0.72);
@@ -70,6 +139,11 @@
       background: rgba(8, 11, 20, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.06);
       box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .framer-subcard:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
     }
 
     /* Custom Sleek Scrollbar */
@@ -111,9 +185,9 @@
 
   <!-- Ambient Aurora & Lighting Effects (Framer / Godly Aesthetic) -->
   <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-tr from-cyan-600/20 via-indigo-600/20 to-fuchsia-600/10 blur-[120px] rounded-full"></div>
-    <div class="absolute top-[40%] -left-32 w-[400px] h-[400px] bg-cyan-600/10 blur-[140px] rounded-full"></div>
-    <div class="absolute top-[60%] -right-32 w-[450px] h-[450px] bg-indigo-600/10 blur-[150px] rounded-full"></div>
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-tr from-cyan-600/25 via-indigo-600/20 to-fuchsia-600/15 blur-[130px] rounded-full animate-aurora-1"></div>
+    <div class="absolute top-[35%] -left-36 w-[450px] h-[450px] bg-cyan-600/15 blur-[150px] rounded-full animate-aurora-2"></div>
+    <div class="absolute top-[55%] -right-36 w-[500px] h-[500px] bg-indigo-600/15 blur-[160px] rounded-full animate-aurora-1"></div>
     <div class="absolute inset-0 bg-grid-pattern"></div>
   </div>
 
@@ -274,18 +348,21 @@
           </div>
         </div>
 
-        <!-- Contract Textarea -->
-        <textarea
-          id="docText"
-          rows="14"
-          placeholder="Paste or upload legal contract here to audit..."
-          class="w-full flex-1 min-h-[280px] sm:min-h-[350px] rounded-xl bg-zinc-950/90 border border-white/[0.08] p-3.5 sm:p-4 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 custom-scroll leading-relaxed shadow-inner"
-        ></textarea>
+        <!-- Contract Textarea with Live AI Laser Scanner -->
+        <div class="relative flex-1 min-h-[280px] sm:min-h-[350px] rounded-xl overflow-hidden border border-white/[0.08] focus-within:border-cyan-500/70 focus-within:ring-1 focus-within:ring-cyan-500/30 transition-all shadow-inner">
+          <div id="scanLaser" class="hidden pointer-events-none absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] z-20 animate-laser"></div>
+          <textarea
+            id="docText"
+            rows="14"
+            placeholder="Paste or upload legal contract here to audit..."
+            class="w-full h-full min-h-[280px] sm:min-h-[350px] bg-zinc-950/90 p-3.5 sm:p-4 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none custom-scroll leading-relaxed"
+          ></textarea>
+        </div>
 
-        <!-- Audit Trigger Button (Framer High-Impact CTA) -->
+        <!-- Audit Trigger Button (Framer High-Impact CTA with Shimmer Sheen) -->
         <button
           id="btnRunAudit"
-          class="mt-4 w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm glow-button flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98] cursor-pointer"
+          class="btn-shimmer mt-4 w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm glow-button flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98] cursor-pointer"
         >
           <i data-lucide="play" class="w-4 h-4 fill-current"></i>
           <span>Run Autonomous Compliance Audit</span>
