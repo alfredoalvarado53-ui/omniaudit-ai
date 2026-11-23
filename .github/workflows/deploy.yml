@@ -1,0 +1,70 @@
+name: Deploy OmniAudit AI to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Permissions required to deploy to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Inject Firebase Configuration from GitHub Secrets / Variables
+        run: |
+          # Check if Firebase credentials are provided via GitHub Secrets/Variables
+          if [ -n "${{ secrets.FIREBASE_API_KEY }}" ] && [ "${{ secrets.FIREBASE_API_KEY }}" != "" ]; then
+            echo "Generating firebase-config.js from repository secrets..."
+            cat <<EOF > firebase-config.js
+          export const firebaseConfig = {
+            apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+            authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN || format('{0}.firebaseapp.com', secrets.FIREBASE_PROJECT_ID) }}",
+            projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+            storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET || format('{0}.firebasestorage.app', secrets.FIREBASE_PROJECT_ID) }}",
+            messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+            appId: "${{ secrets.FIREBASE_APP_ID }}"
+          };
+
+          export const appCheckConfig = {
+            recaptchaSiteKey: "${{ secrets.RECAPTCHA_SITE_KEY || '' }}",
+            isLocalDebug: false
+          };
+          EOF
+            echo "firebase-config.js created successfully."
+          else
+            echo "No FIREBASE_API_KEY secret detected in repository."
+            echo "Creating unconfigured placeholder to inform judges gracefully..."
+            cat <<EOF > firebase-config.js
+          export const firebaseConfig = null;
+          export const appCheckConfig = null;
+          EOF
+          fi
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
