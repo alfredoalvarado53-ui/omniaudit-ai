@@ -7,6 +7,7 @@ const charCount = document.getElementById("charCount");
 const dropZone = document.getElementById("dropZone");
 const fileUpload = document.getElementById("fileUpload");
 const btnRunAudit = document.getElementById("btnRunAudit");
+const btnRunDemo = document.getElementById("btnRunDemo");
 const playbookSelect = document.getElementById("playbookSelect");
 
 const netStatusBadge = document.getElementById("netStatusBadge");
@@ -68,19 +69,25 @@ window.addEventListener("online", updateNetworkStatus);
 window.addEventListener("offline", updateNetworkStatus);
 updateNetworkStatus();
 
-// Detect Local Browser AI
+// Detect Local Browser AI or Firebase AI Logic Status
 async function initCapabilities() {
+  await engine._initPromise;
   const caps = await engine.checkCapabilities();
   if (caps.available) {
     engineStatusBadge.className =
-      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/60";
-    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Gemini Nano Ready (Chrome)</span>`;
-    telemetryEngine.textContent = "Gemini Nano";
+      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/25";
+    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Gemini Nano Ready</span>`;
+    telemetryEngine.textContent = "Gemini Nano (Local)";
+  } else if (engine.isFirebaseReady) {
+    engineStatusBadge.className =
+      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25";
+    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400"></span><span>Firebase AI Logic Ready</span>`;
+    telemetryEngine.textContent = "Gemini 1.5 Flash (Cloud)";
   } else {
     engineStatusBadge.className =
-      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-cyan-950/60 text-cyan-300 border border-cyan-700/60";
-    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400"></span><span>Cloud Fallback (Firebase)</span>`;
-    telemetryEngine.textContent = "Gemini Flash";
+      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium bg-zinc-900 text-zinc-400 border border-white/[0.08]";
+    engineStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-zinc-500"></span><span>Demo / Requiere Config</span>`;
+    telemetryEngine.textContent = "Sin Conexión AI";
   }
 }
 initCapabilities();
@@ -129,8 +136,17 @@ async function readFile(file) {
         const pageStr = textContent.items.map((item) => item.str).join(" ");
         fullText += `--- Page ${i} ---\n${pageStr}\n\n`;
       }
-      docText.value = fullText.trim();
-      charCount.textContent = `${docText.value.length} characters (${pdf.numPages} PDF pages extracted)`;
+
+      const trimmed = fullText.trim();
+      if (!trimmed || trimmed.length === 0) {
+        docText.value = "";
+        charCount.textContent = "0 characters";
+        alert("El archivo PDF cargado no contiene texto digital legible (parece ser un escaneo o imagen que requiere OCR). Por favor copia el texto o usa un PDF con texto digital seleccionable.");
+        return;
+      }
+
+      docText.value = trimmed;
+      charCount.textContent = `${trimmed.length} characters (${pdf.numPages} PDF pages extracted)`;
       return;
     } catch (err) {
       console.error("PDF extraction error:", err);
@@ -218,7 +234,7 @@ Any claim for constructive dismissal or unpaid bonuses is waived upon execution 
   charCount.textContent = `${docText.value.length} characters`;
 });
 
-// Run Autonomous Audit Execution
+// Run Autonomous Audit Execution (AI Route)
 btnRunAudit.addEventListener("click", async () => {
   const text = docText.value.trim();
   if (!text) {
@@ -241,7 +257,7 @@ btnRunAudit.addEventListener("click", async () => {
   `;
 
   try {
-    const result = await engine.auditDocument(text);
+    const result = await engine.auditDocument(text, { playbook: playbookSelect.value });
     latestAuditResult = result;
 
     // Render Markdown Report
@@ -256,8 +272,24 @@ btnRunAudit.addEventListener("click", async () => {
     renderStructuredFindings(result.structuredData);
 
   } catch (err) {
-    console.error(err);
-    viewReport.innerHTML = `<div class="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-200">Error executing audit: ${err.message}</div>`;
+    console.error("Audit Execution Error:", err);
+    viewReport.innerHTML = `
+      <div class="p-4 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-100 font-sans space-y-3">
+        <div class="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          <span>Error en la Ruta de IA</span>
+        </div>
+        <p class="text-xs text-rose-200/90 leading-relaxed">${err.message}</p>
+        <div class="pt-2 border-t border-rose-500/20 text-[11px] text-zinc-400 space-y-1">
+          <p><strong>Para resolver esto:</strong></p>
+          <ul class="list-disc list-inside space-y-0.5 text-zinc-400">
+            <li>Si deseas probar en la nube: configura tus credenciales en <code class="text-cyan-300">firebase-config.js</code> siguiendo el README.</li>
+            <li>Si deseas probar en local: usa Google Chrome v138+ con flags de Gemini Nano activas.</li>
+            <li>O bien, haz clic abajo para ejecutar la referencia local estática de prueba:</li>
+          </ul>
+        </div>
+      </div>
+    `;
   } finally {
     if (scanLaser) scanLaser.classList.add("hidden");
     btnRunAudit.disabled = false;
@@ -266,6 +298,44 @@ btnRunAudit.addEventListener("click", async () => {
     refreshIcons();
   }
 });
+
+// Explicit Static Benchmark Demo (Clearly separated from AI route)
+if (btnRunDemo) {
+  btnRunDemo.addEventListener("click", async () => {
+    const text = docText.value.trim();
+    if (!text) {
+      alert("Por favor introduce o selecciona una plantilla para probar la demo estática.");
+      return;
+    }
+
+    btnRunDemo.disabled = true;
+    btnRunAudit.disabled = true;
+
+    try {
+      const result = await engine.auditDocument(text, { playbook: playbookSelect.value, isStaticDemo: true });
+      latestAuditResult = result;
+
+      // Render Markdown Report
+      viewReport.innerHTML = marked.parse(result.content);
+
+      // Update Telemetry
+      telemetryEngine.textContent = result.model;
+      telemetryLatency.textContent = `${result.latencyMs} ms`;
+      telemetryPrivacy.textContent = "Demo Local";
+
+      // Render Structured Findings
+      renderStructuredFindings(result.structuredData);
+
+    } catch (err) {
+      viewReport.innerHTML = `<div class="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-200">Error en demo: ${err.message}</div>`;
+    } finally {
+      btnRunDemo.disabled = false;
+      btnRunAudit.disabled = false;
+      if (window.innerWidth < 1024) { setMobileView("score"); }
+      refreshIcons();
+    }
+  });
+}
 
 // AI Model-Driven Structured Risk Findings & Redlines Renderer
 function renderStructuredFindings(data) {
