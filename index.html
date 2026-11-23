@@ -37,6 +37,8 @@
 
   <!-- Marked for Markdown -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- DOMPurify for Safe Markdown & HTML Sanitization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- PDF.js for True Client-Side Document Parsing -->
@@ -251,6 +253,11 @@
           <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
           <span id="engineBadgeText" class="truncate max-w-[120px] sm:max-w-none">Auto Engine</span>
         </div>
+
+        <!-- Firebase Config Button (Judge & Session Setup) -->
+        <button id="btnOpenConfigModal" class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 hover:text-white transition active:scale-95 flex items-center justify-center cursor-pointer" title="Configuración de Sesión Firebase">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+        </button>
 
         <!-- GitHub Link -->
         <a href="https://github.com/alfredoalvarado53-ui/omniaudit-ai" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 hover:text-white transition active:scale-95 flex items-center justify-center" title="View Source on GitHub">
@@ -526,6 +533,62 @@
       <span>Chrome Built-in AI & Firebase</span>
     </div>
   </footer>
+
+  <!-- Firebase Session Configuration Modal (For Judges & Evaluators) -->
+  <div id="configModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="framer-card max-w-lg w-full rounded-2xl p-5 sm:p-6 space-y-4 border border-white/[0.12] shadow-2xl relative">
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Firebase AI Logic & App Check</h3>
+            <p class="text-[11px] text-zinc-400">Configuración de sesión en vivo para evaluadores</p>
+          </div>
+        </div>
+        <button id="btnCloseConfigModal" class="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="text-xs text-zinc-300 space-y-2 leading-relaxed">
+        <p>Para probar la ruta real en la nube con <strong>Gemini 1.5 Flash</strong> protegida por <strong>App Check</strong> en este navegador, puedes pegar aquí tu objeto de configuración de Firebase Web.</p>
+        <p class="text-[11px] text-zinc-500">Nota: Los datos se guardan únicamente en la memoria de sesión de este navegador (<code class="text-cyan-400">sessionStorage</code>) y nunca se envían a ningún servidor de terceros.</p>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">Pegar Objeto / JSON de Firebase Web</label>
+        <textarea
+          id="customFirebaseConfigInput"
+          rows="6"
+          placeholder='{\n  "apiKey": "AIzaSy...",\n  "projectId": "tu-proyecto-firebase",\n  "authDomain": "tu-proyecto.firebaseapp.com",\n  "appId": "1:..."\n}'
+          class="w-full rounded-xl bg-zinc-950 p-3 font-mono text-xs text-zinc-200 border border-white/[0.1] focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 custom-scroll leading-relaxed"
+        ></textarea>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400 block">Clave de Sitio reCAPTCHA v3 / Enterprise (Para App Check)</label>
+        <input
+          type="text"
+          id="customRecaptchaKeyInput"
+          placeholder="Clave pública de reCAPTCHA para este dominio"
+          class="w-full rounded-xl bg-zinc-950 p-2.5 font-mono text-xs text-zinc-200 border border-white/[0.1] focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
+        />
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-white/[0.08]">
+        <button id="btnClearConfig" class="px-3 py-1.5 rounded-lg text-xs text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 transition cursor-pointer">
+          Restablecer
+        </button>
+        <div class="flex items-center gap-2">
+          <button id="btnSaveConfig" class="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition shadow-sm cursor-pointer">
+            Guardar en Sesión y Recargar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- App Script -->
   <script type="module" src="./app.js"></script>
