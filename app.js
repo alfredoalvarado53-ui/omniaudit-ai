@@ -260,8 +260,9 @@ btnRunAudit.addEventListener("click", async () => {
     const result = await engine.auditDocument(text, { playbook: playbookSelect.value });
     latestAuditResult = result;
 
-    // Render Markdown Report
-    viewReport.innerHTML = marked.parse(result.content);
+    // Render Markdown Report with DOMPurify sanitization
+    const rawHtml = marked.parse(result.content);
+    viewReport.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
 
     // Update Telemetry
     telemetryEngine.textContent = result.model;
@@ -315,8 +316,9 @@ if (btnRunDemo) {
       const result = await engine.auditDocument(text, { playbook: playbookSelect.value, isStaticDemo: true });
       latestAuditResult = result;
 
-      // Render Markdown Report
-      viewReport.innerHTML = marked.parse(result.content);
+      // Render Markdown Report with DOMPurify sanitization
+      const rawDemoHtml = marked.parse(result.content);
+      viewReport.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawDemoHtml) : rawDemoHtml;
 
       // Update Telemetry
       telemetryEngine.textContent = result.model;
@@ -540,3 +542,86 @@ window.addEventListener('resize', () => {
     setMobileView('editor');
   }
 });
+
+// --- Firebase Session Settings Modal (For Judges & Evaluators) ---
+const configModal = document.getElementById("configModal");
+const btnOpenConfigModal = document.getElementById("btnOpenConfigModal");
+const btnCloseConfigModal = document.getElementById("btnCloseConfigModal");
+const customFirebaseConfigInput = document.getElementById("customFirebaseConfigInput");
+const customRecaptchaKeyInput = document.getElementById("customRecaptchaKeyInput");
+const btnSaveConfig = document.getElementById("btnSaveConfig");
+const btnClearConfig = document.getElementById("btnClearConfig");
+
+if (btnOpenConfigModal && configModal) {
+  btnOpenConfigModal.addEventListener("click", () => {
+    // Load any currently stored session configuration
+    try {
+      const saved = sessionStorage.getItem("OMNIAUDIT_FIREBASE_CONFIG");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.firebaseConfig) {
+          customFirebaseConfigInput.value = JSON.stringify(parsed.firebaseConfig, null, 2);
+        }
+        if (parsed.appCheckConfig && parsed.appCheckConfig.recaptchaSiteKey) {
+          customRecaptchaKeyInput.value = parsed.appCheckConfig.recaptchaSiteKey;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    configModal.classList.remove("hidden");
+    refreshIcons();
+  });
+
+  if (btnCloseConfigModal) {
+    btnCloseConfigModal.addEventListener("click", () => {
+      configModal.classList.add("hidden");
+    });
+  }
+
+  if (btnSaveConfig) {
+    btnSaveConfig.addEventListener("click", () => {
+      const rawJson = customFirebaseConfigInput.value.trim();
+      if (!rawJson) {
+        alert("Por favor introduce un objeto de configuración de Firebase válido.");
+        return;
+      }
+      try {
+        let parsed;
+        try {
+          parsed = JSON.parse(rawJson);
+        } catch {
+          // If copied without outer brackets or as JS object
+          parsed = (new Function("return (" + rawJson + ")"))();
+        }
+
+        if (!parsed.apiKey || !parsed.projectId) {
+          alert("El objeto de configuración debe contener al menos 'apiKey' y 'projectId'.");
+          return;
+        }
+
+        const sessionPayload = {
+          firebaseConfig: parsed,
+          appCheckConfig: {
+            recaptchaSiteKey: customRecaptchaKeyInput ? customRecaptchaKeyInput.value.trim() : "",
+            isLocalDebug: false
+          }
+        };
+
+        sessionStorage.setItem("OMNIAUDIT_FIREBASE_CONFIG", JSON.stringify(sessionPayload));
+        alert("Configuración guardada en la sesión. La página se recargará para inicializar el motor con tus credenciales.");
+        window.location.reload();
+      } catch (e) {
+        alert("Error al interpretar la configuración: " + e.message);
+      }
+    });
+  }
+
+  if (btnClearConfig) {
+    btnClearConfig.addEventListener("click", () => {
+      sessionStorage.removeItem("OMNIAUDIT_FIREBASE_CONFIG");
+      alert("Configuración de sesión eliminada. La página se recargará.");
+      window.location.reload();
+    });
+  }
+}
