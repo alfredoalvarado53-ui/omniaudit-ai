@@ -366,14 +366,27 @@
           ></textarea>
         </div>
 
-        <!-- Audit Trigger Button (Framer High-Impact CTA with Shimmer Sheen) -->
-        <button
-          id="btnRunAudit"
-          class="btn-shimmer mt-4 w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm glow-button flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98] cursor-pointer"
-        >
-          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-          <span>Run Autonomous Compliance Audit</span>
-        </button>
+        <!-- Action Buttons -->
+        <div class="mt-4 flex flex-col gap-2">
+          <!-- Audit Trigger Button (Framer High-Impact CTA with Shimmer Sheen) -->
+          <button
+            id="btnRunAudit"
+            class="btn-shimmer w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm glow-button flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98] cursor-pointer"
+          >
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            <span>Run Autonomous Compliance Audit (AI)</span>
+          </button>
+
+          <!-- Explicit Non-AI Benchmark Demo Button for Transparency -->
+          <button
+            id="btnRunDemo"
+            class="w-full py-2 px-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.04] text-zinc-400 hover:text-zinc-200 text-xs font-mono transition flex items-center justify-center gap-1.5 cursor-pointer"
+            title="Ejecutar análisis de referencia local sin modelos de IA"
+          >
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-zinc-500"></i>
+            <span>Probar Demo Local (Reglas Estáticas · Sin IA)</span>
+          </button>
+        </div>
 
       </div>
     </div>
