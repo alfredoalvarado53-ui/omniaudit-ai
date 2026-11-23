@@ -122,15 +122,15 @@ function readFile(file) {
 
 // Tab Switching (Executive Report vs Smart Redline)
 tabReport.addEventListener("click", () => {
-  tabReport.className = "px-3 py-1 rounded-md text-xs font-medium bg-slate-800 text-white transition";
-  tabRedline.className = "px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition";
+  tabReport.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.1] text-white transition-all cursor-pointer shadow-sm";
+  tabRedline.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer";
   viewReport.classList.remove("hidden");
   viewRedline.classList.add("hidden");
 });
 
 tabRedline.addEventListener("click", () => {
-  tabRedline.className = "px-3 py-1 rounded-md text-xs font-medium bg-slate-800 text-white transition";
-  tabReport.className = "px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition";
+  tabRedline.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.1] text-white transition-all cursor-pointer shadow-sm";
+  tabReport.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer";
   viewRedline.classList.remove("hidden");
   viewReport.classList.add("hidden");
 });
@@ -312,16 +312,16 @@ function parseAndRenderFindings(doc, report) {
   scoreBar.style.width = `${score}%`;
 
   if (score >= 80) {
-    scoreBar.className = "h-full bg-emerald-500 transition-all duration-700";
-    riskVerdictBadge.className = "text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700";
+    scoreBar.className = "h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(16,185,129,0.5)]";
+    riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25";
     riskVerdictBadge.textContent = "Low Risk (Favorable)";
   } else if (score >= 50) {
-    scoreBar.className = "h-full bg-amber-500 transition-all duration-700";
-    riskVerdictBadge.className = "text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-700";
+    scoreBar.className = "h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.5)]";
+    riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25";
     riskVerdictBadge.textContent = "Moderate Risk (Amendments Recommended)";
   } else {
-    scoreBar.className = "h-full bg-rose-500 transition-all duration-700";
-    riskVerdictBadge.className = "text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose-950 text-rose-400 border border-rose-700";
+    scoreBar.className = "h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]";
+    riskVerdictBadge.className = "text-xs font-mono font-bold px-3 py-1 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/25";
     riskVerdictBadge.textContent = "High Risk (Hostile Terms)";
   }
 
@@ -329,36 +329,39 @@ function parseAndRenderFindings(doc, report) {
   findingCountBadge.textContent = `${findings.length} findings`;
   if (findings.length === 0) {
     findingsContainer.innerHTML = `
-      <div class="h-44 flex flex-col items-center justify-center text-emerald-400 text-xs text-center p-4">
-        <i data-lucide="shield-check" class="w-8 h-8 mb-2"></i>
-        <span>Clean contract structure. No high-severity risks flagged under active playbook.</span>
+      <div class="h-48 flex flex-col items-center justify-center text-emerald-400 text-xs text-center p-4">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
+          <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+        </div>
+        <span class="font-medium">Clean contract structure</span>
+        <span class="text-[11px] text-zinc-500 mt-1">No high-severity risks flagged under active playbook.</span>
       </div>
     `;
   } else {
     findingsContainer.innerHTML = findings
       .map(
         (f) => `
-        <div class="p-3 rounded-xl border ${
+        <div class="p-3.5 rounded-xl border ${
           f.severity === "HIGH"
-            ? "border-rose-800/80 bg-rose-950/30 text-rose-100"
-            : "border-amber-800/80 bg-amber-950/30 text-amber-100"
-        } transition hover:scale-[1.01]">
-          <div class="flex items-center justify-between mb-1">
-            <span class="font-bold text-xs flex items-center gap-1">
-              <i data-lucide="${f.severity === "HIGH" ? "alert-circle" : "alert-triangle"}" class="w-3.5 h-3.5"></i>
+            ? "border-rose-500/25 bg-rose-500/[0.04] text-rose-100 hover:border-rose-500/40 hover:bg-rose-500/[0.07]"
+            : "border-amber-500/25 bg-amber-500/[0.04] text-amber-100 hover:border-amber-500/40 hover:bg-amber-500/[0.07]"
+        } transition-all">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-bold text-xs flex items-center gap-1.5 text-zinc-100">
+              <i data-lucide="${f.severity === "HIGH" ? "alert-circle" : "alert-triangle"}" class="w-3.5 h-3.5 ${f.severity === "HIGH" ? "text-rose-400" : "text-amber-400"}"></i>
               ${f.title}
             </span>
-            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded ${
-              f.severity === "HIGH" ? "bg-rose-900 text-rose-200" : "bg-amber-900 text-amber-200"
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+              f.severity === "HIGH" ? "bg-rose-500/15 text-rose-300 border border-rose-500/30" : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             }">${f.severity}</span>
           </div>
-          <p class="text-[11px] text-slate-300 mb-1.5 leading-snug">${f.desc}</p>
-          <div class="bg-slate-950/60 p-1.5 rounded border border-slate-800 font-mono text-[10px] text-slate-400 mb-1">
-            <span class="text-rose-400 font-bold block mb-0.5">Original Flag:</span>
+          <p class="text-[11px] text-zinc-300 mb-2 leading-relaxed">${f.desc}</p>
+          <div class="bg-black/50 p-2 rounded-lg border border-white/[0.06] font-mono text-[10px] text-zinc-400 mb-1.5 shadow-inner">
+            <span class="text-rose-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Original Clause Flag:</span>
             "${f.clause}"
           </div>
-          <div class="bg-emerald-950/40 p-1.5 rounded border border-emerald-900/60 font-mono text-[10px] text-emerald-300">
-            <span class="text-emerald-400 font-bold block mb-0.5">Recommended Playbook Fix:</span>
+          <div class="bg-emerald-500/[0.06] p-2 rounded-lg border border-emerald-500/20 font-mono text-[10px] text-emerald-300">
+            <span class="text-emerald-400 font-bold block mb-0.5 uppercase tracking-wider text-[9px]">Recommended Playbook Fix:</span>
             ${f.fix}
           </div>
         </div>
@@ -374,23 +377,25 @@ function parseAndRenderFindings(doc, report) {
 // Generate Redline View (Side-by-side or Strikethrough edits like Ironclad)
 function renderSmartRedline(originalText, findings) {
   let redlinedHtml = `
-    <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 mb-3 text-xs text-slate-400">
-      <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400 inline mr-1"></i>
-      <strong>Automated AI Redline (Ironclad / Robin AI Standard):</strong> Hostile and uncalibrated clauses have been marked for deletion with calibrated fallback amendments suggested.
+    <div class="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] mb-3 text-xs text-zinc-400 flex items-start gap-2">
+      <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
+      <div>
+        <strong class="text-zinc-200">Automated Smart Redline:</strong> Hostile and uncalibrated clauses have been marked for deletion with calibrated fallback amendments suggested.
+      </div>
     </div>
   `;
 
   findings.forEach((f, idx) => {
     redlinedHtml += `
-      <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/70 font-mono text-xs space-y-2">
-        <div class="text-slate-400 font-bold flex items-center justify-between">
-          <span>Amendment #${idx + 1}: ${f.title}</span>
-          <span class="text-[10px] text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">Ready to Apply</span>
+      <div class="p-4 rounded-xl border border-white/[0.08] bg-zinc-950/80 font-mono text-xs space-y-2.5 shadow-sm">
+        <div class="text-zinc-300 font-bold flex items-center justify-between">
+          <span class="text-zinc-200">Amendment #${idx + 1}: ${f.title}</span>
+          <span class="text-[10px] text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/25">Ready to Apply</span>
         </div>
-        <div class="p-2 rounded bg-rose-950/30 border border-rose-900/40 text-rose-300 line-through">
+        <div class="p-2.5 rounded-lg bg-rose-500/[0.08] border border-rose-500/25 text-rose-300 line-through">
           ${f.clause}
         </div>
-        <div class="p-2 rounded bg-emerald-950/30 border border-emerald-900/40 text-emerald-300 font-medium">
+        <div class="p-2.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 font-medium">
           + ${f.fix}
         </div>
       </div>
@@ -445,19 +450,21 @@ function setMobileView(activeTab) {
   // Reset tab buttons
   [mobileTabEditor, mobileTabScore, mobileTabResults].forEach(btn => {
     if (btn) {
-      btn.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition text-slate-400 hover:text-white flex items-center justify-center gap-1';
+      btn.className = 'py-2 text-xs font-semibold rounded-xl text-center transition-all text-zinc-400 hover:text-white flex items-center justify-center gap-1.5';
     }
   });
 
+  const activeClass = 'py-2 text-xs font-semibold rounded-xl text-center transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center justify-center gap-1.5 shadow-sm';
+
   if (activeTab === 'editor') {
     colEditor.classList.remove('hidden');
-    if (mobileTabEditor) mobileTabEditor.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+    if (mobileTabEditor) mobileTabEditor.className = activeClass;
   } else if (activeTab === 'score') {
     colScore.classList.remove('hidden');
-    if (mobileTabScore) mobileTabScore.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+    if (mobileTabScore) mobileTabScore.className = activeClass;
   } else if (activeTab === 'results') {
     colResults.classList.remove('hidden');
-    if (mobileTabResults) mobileTabResults.className = 'py-1.5 text-xs font-semibold rounded-lg text-center transition bg-cyan-600 text-white flex items-center justify-center gap-1';
+    if (mobileTabResults) mobileTabResults.className = activeClass;
   }
 }
 
