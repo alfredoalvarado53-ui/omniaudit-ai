@@ -44,17 +44,35 @@ export class HybridAuditEngine {
     let appCheckCfg = null;
 
     if (!cfg) {
-      if (typeof window !== "undefined" && window.__FIREBASE_CONFIG__) {
+      // 1. Check browser sessionStorage for judge/evaluator entered credentials
+      if (typeof window !== "undefined") {
+        try {
+          const sessionSaved = sessionStorage.getItem("OMNIAUDIT_FIREBASE_CONFIG");
+          if (sessionSaved) {
+            const parsed = JSON.parse(sessionSaved);
+            if (parsed && parsed.firebaseConfig) {
+              cfg = parsed.firebaseConfig;
+              appCheckCfg = parsed.appCheckConfig || null;
+            }
+          }
+        } catch (e) {
+          console.warn("Could not read sessionStorage config:", e);
+        }
+      }
+
+      // 2. Check window.__FIREBASE_CONFIG__
+      if (!cfg && typeof window !== "undefined" && window.__FIREBASE_CONFIG__) {
         cfg = window.__FIREBASE_CONFIG__;
         appCheckCfg = window.__FIREBASE_APPCHECK_CONFIG__ || null;
-      } else {
+      }
+
+      // 3. Attempt to load local untracked config or GitHub Pages build config
+      if (!cfg) {
         try {
-          // Attempt to load developer's local untracked config
           const mod = await import("./firebase-config.js");
           cfg = mod.firebaseConfig;
           appCheckCfg = mod.appCheckConfig;
         } catch {
-          // firebase-config.js is absent (normal in fresh clone or GitHub Pages public deployment)
           cfg = null;
         }
       }
@@ -63,20 +81,21 @@ export class HybridAuditEngine {
     // Validate that configuration is genuine and not default placeholders
     if (!cfg || !cfg.apiKey || !cfg.projectId || cfg.apiKey.startsWith("YOUR_") || cfg.projectId.startsWith("YOUR_")) {
       this.isFirebaseReady = false;
-      this.firebaseError = "Firebase AI Logic no está configurado. Copia 'firebase-config.example.js' a 'firebase-config.js' con las credenciales reales de tu proyecto de Firebase.";
+      this.isAppCheckActive = false;
+      this.firebaseError = "Firebase AI Logic no está configurado. Añade tus credenciales en 'firebase-config.js' o haz clic en ⚙️ (arriba a la derecha) para configurar una sesión en vivo sin instalaciones.";
       return;
     }
 
     try {
       this.app = initializeApp(cfg);
+      this.isAppCheckActive = false;
 
       // Configure App Check according to official Firebase specifications
       const isLocalhost = typeof window !== "undefined" && 
         (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
       if (appCheckCfg && appCheckCfg.isLocalDebug && isLocalhost) {
-        // Official Firebase debug token mechanism:
-        // Firebase logs the generated token to DevTools console for the developer to register in Firebase Console.
+        // Official Firebase debug token mechanism for localhost
         self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
       }
 
@@ -85,6 +104,7 @@ export class HybridAuditEngine {
           provider: new ReCaptchaV3Provider(appCheckCfg.recaptchaSiteKey),
           isTokenAutoRefreshEnabled: true,
         });
+        this.isAppCheckActive = true;
       }
 
       // Initialize Firebase AI Logic (Vertex AI in Firebase)
@@ -101,6 +121,7 @@ export class HybridAuditEngine {
       this.firebaseError = null;
     } catch (err) {
       this.isFirebaseReady = false;
+      this.isAppCheckActive = false;
       this.firebaseError = `Error al inicializar Firebase AI Logic: ${err.message}`;
       console.warn(this.firebaseError);
     }
